@@ -286,9 +286,16 @@ with tab_trip:
 
         # 해당 일차 일정 목록
         st.subheader(f"📋 {day_labels[st.session_state.selected_day]} 확정 일정")
+        def val(v):
+            return "" if pd.isna(v) or str(v).strip() == "" else str(v).strip()
+
         for i, row in df_day.iterrows():
-            memo = f" — {row['메모']}" if row.get('메모') else ""
-            st.markdown(f"**{i+1}.** `{row.get('시간','')}` {row.get('내용','')}{memo}")
+            time_str = val(row.get('시간'))
+            content_str = val(row.get('내용'))
+            memo_str = val(row.get('메모'))
+            memo = f" — {memo_str}" if memo_str else ""
+            time_badge = f"`{time_str}` " if time_str else ""
+            st.markdown(f"**{i+1}.** {time_badge}{content_str}{memo}")
 
 # --- [3. AI 여행 비서 단계] ---
 with tab_ai:
