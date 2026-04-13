@@ -180,6 +180,7 @@ with tab_prep:
             df_i,
             use_container_width=True,
             hide_index=True,
+            height=35 * (len(df_i) + 1) + 10,
             column_config={
                 "날짜": st.column_config.TextColumn("날짜", width="small"),
                 "요일": st.column_config.TextColumn("요일", width="small"),
