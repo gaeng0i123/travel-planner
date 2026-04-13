@@ -437,17 +437,30 @@ with tab_trip:
                 st.session_state.scroll_to_map = False
                 components.html("""
                 <script>
-                function applyScroll() {
+                (function() {
                     var doc = window.parent.document;
-                    var anchor = doc.getElementById('trip-map-anchor');
-                    if (!anchor) return;
                     var main = doc.querySelector('[data-testid="stMain"]');
-                    var cTop = main ? main.getBoundingClientRect().top : 0;
-                    anchor.scrollIntoView({behavior: 'instant', block: 'start'});
-                    var aTop = anchor.getBoundingClientRect().top;
-                    if (Math.abs(aTop - cTop) > 5 && main) main.scrollTop += (aTop - cTop);
-                }
-                setTimeout(applyScroll, 900);
+                    var lastOurScroll = 0, debounce;
+
+                    function applyScroll() {
+                        var anchor = doc.getElementById('trip-map-anchor');
+                        if (!anchor) return;
+                        var cTop = main ? main.getBoundingClientRect().top : 0;
+                        lastOurScroll = Date.now();
+                        anchor.scrollIntoView({behavior: 'instant', block: 'start'});
+                        var aTop = anchor.getBoundingClientRect().top;
+                        if (Math.abs(aTop - cTop) > 5 && main) main.scrollTop += (aTop - cTop);
+                    }
+
+                    function onScroll() {
+                        if (Date.now() - lastOurScroll < 400) return;
+                        clearTimeout(debounce);
+                        debounce = setTimeout(applyScroll, 80);
+                    }
+                    var target = main || window.parent;
+                    target.addEventListener('scroll', onScroll);
+                    setTimeout(function(){ target.removeEventListener('scroll', onScroll); }, 5000);
+                })();
                 </script>
                 """, height=1)
 
@@ -577,17 +590,30 @@ with tab_trip:
                 st.session_state.scroll_to_map = False
                 components.html("""
                 <script>
-                function applyScroll() {
+                (function() {
                     var doc = window.parent.document;
-                    var anchor = doc.getElementById('trip-map-anchor');
-                    if (!anchor) return;
                     var main = doc.querySelector('[data-testid="stMain"]');
-                    var cTop = main ? main.getBoundingClientRect().top : 0;
-                    anchor.scrollIntoView({behavior: 'instant', block: 'start'});
-                    var aTop = anchor.getBoundingClientRect().top;
-                    if (Math.abs(aTop - cTop) > 5 && main) main.scrollTop += (aTop - cTop);
-                }
-                setTimeout(applyScroll, 900);
+                    var lastOurScroll = 0, debounce;
+
+                    function applyScroll() {
+                        var anchor = doc.getElementById('trip-map-anchor');
+                        if (!anchor) return;
+                        var cTop = main ? main.getBoundingClientRect().top : 0;
+                        lastOurScroll = Date.now();
+                        anchor.scrollIntoView({behavior: 'instant', block: 'start'});
+                        var aTop = anchor.getBoundingClientRect().top;
+                        if (Math.abs(aTop - cTop) > 5 && main) main.scrollTop += (aTop - cTop);
+                    }
+
+                    function onScroll() {
+                        if (Date.now() - lastOurScroll < 400) return;
+                        clearTimeout(debounce);
+                        debounce = setTimeout(applyScroll, 80);
+                    }
+                    var target = main || window.parent;
+                    target.addEventListener('scroll', onScroll);
+                    setTimeout(function(){ target.removeEventListener('scroll', onScroll); }, 5000);
+                })();
                 </script>
                 """, height=1)
 
