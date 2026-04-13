@@ -441,14 +441,15 @@ with tab_trip:
                     var doc = window.parent.document;
                     var anchor = doc.getElementById('trip-map-anchor');
                     if (!anchor) return;
-                    // PC: scrollIntoView 동작
-                    anchor.scrollIntoView({behavior: 'instant', block: 'start'});
-                    // 모바일(iOS): scrollIntoView가 iframe에서 안 먹히면 window.scrollBy로 폴백
                     var main = doc.querySelector('[data-testid="stMain"]');
-                    var containerTop = main ? main.getBoundingClientRect().top : 0;
-                    var anchorTop = anchor.getBoundingClientRect().top;
-                    if (Math.abs(anchorTop - containerTop) > 5) {
-                        window.parent.scrollBy(0, anchorTop - containerTop);
+                    var cTop = main ? main.getBoundingClientRect().top : 0;
+                    // 1) PC: scrollIntoView
+                    anchor.scrollIntoView({behavior: 'instant', block: 'start'});
+                    // 2) 모바일: scrollIntoView 후에도 anchor가 cTop에 없으면
+                    //    stMain.scrollTop으로 직접 보정 (iOS Safari 대응)
+                    var aTop = anchor.getBoundingClientRect().top;
+                    if (Math.abs(aTop - cTop) > 5 && main) {
+                        main.scrollTop += (aTop - cTop);
                     }
                 }
                 setTimeout(doScroll, 120);
@@ -587,14 +588,15 @@ with tab_trip:
                     var doc = window.parent.document;
                     var anchor = doc.getElementById('trip-map-anchor');
                     if (!anchor) return;
-                    // PC: scrollIntoView 동작
-                    anchor.scrollIntoView({behavior: 'instant', block: 'start'});
-                    // 모바일(iOS): scrollIntoView가 iframe에서 안 먹히면 window.scrollBy로 폴백
                     var main = doc.querySelector('[data-testid="stMain"]');
-                    var containerTop = main ? main.getBoundingClientRect().top : 0;
-                    var anchorTop = anchor.getBoundingClientRect().top;
-                    if (Math.abs(anchorTop - containerTop) > 5) {
-                        window.parent.scrollBy(0, anchorTop - containerTop);
+                    var cTop = main ? main.getBoundingClientRect().top : 0;
+                    // 1) PC: scrollIntoView
+                    anchor.scrollIntoView({behavior: 'instant', block: 'start'});
+                    // 2) 모바일: scrollIntoView 후에도 anchor가 cTop에 없으면
+                    //    stMain.scrollTop으로 직접 보정 (iOS Safari 대응)
+                    var aTop = anchor.getBoundingClientRect().top;
+                    if (Math.abs(aTop - cTop) > 5 && main) {
+                        main.scrollTop += (aTop - cTop);
                     }
                 }
                 setTimeout(doScroll, 120);
