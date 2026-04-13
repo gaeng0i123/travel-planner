@@ -289,6 +289,8 @@ with tab_prep:
     st.header("🗓️ 3. 예상 일정")
     if data["itinerary"]:
         df_i = pd.DataFrame(data["itinerary"])
+        # memo 값 보존용 원본 저장
+        original_확정 = df_i["확정"].copy()
         df_i["확정"] = df_i["확정"].apply(lambda x: str(x).strip().lower() in ("true", "1", "yes", "확정", "ok"))
         edited = st.data_editor(
             df_i,
@@ -313,7 +315,11 @@ with tab_prep:
         )
         if not edited["확정"].equals(df_i["확정"]):
             save_df = edited.copy()
-            save_df["확정"] = save_df["확정"].apply(lambda x: "ok" if x else "")
+            save_df["확정"] = save_df.apply(
+                lambda row: "memo" if str(original_확정.iloc[row.name]).strip().lower() == "memo"
+                            else ("ok" if row["확정"] else ""),
+                axis=1
+            )
             update_sheet(save_df, "상세일정")
             st.success("확정 상태가 저장되었습니다!")
             st.rerun()
@@ -327,6 +333,14 @@ with tab_trip:
     # 확정된 일정만 필터링
     confirmed = [r for r in data["itinerary"] if str(r.get("확정", "")).strip().lower() in ("true", "1", "yes", "확정", "ok")]
     df_confirmed = pd.DataFrame(confirmed) if confirmed else pd.DataFrame()
+
+    # 주요메모 장소 필터링 (좌표 있는 것만)
+    memo_places = [
+        r for r in data["itinerary"]
+        if str(r.get("확정", "")).strip().lower() == "memo"
+        and str(r.get("lat", "")).strip() not in ("", "nan")
+        and str(r.get("lon", "")).strip() not in ("", "nan")
+    ]
 
     if df_confirmed.empty:
         st.info("여행 준비 탭 예상일정에서 일정을 확정하면 여기에 표시됩니다.")
@@ -394,6 +408,25 @@ with tab_trip:
         else:
             st.info("📍 구글 지도 링크에서 좌표를 추출하면 핀이 표시됩니다.")
 
+        # 주요메모 핀 (파란 📌, 모든 일차 공통 표시)
+        for r in memo_places:
+            try:
+                mlat, mlon = float(r["lat"]), float(r["lon"])
+                mplace = str(r.get("장소명", "") or r.get("내용", "")).strip()
+                mmemo  = str(r.get("메모", "")).strip()
+                popup_html = f"<b>📌 {mplace}</b>" + (f"<br>{mmemo}" if mmemo else "")
+                folium.Marker(
+                    location=[mlat, mlon],
+                    popup=folium.Popup(popup_html, max_width=200),
+                    tooltip=f"📌 {mplace}",
+                    icon=folium.DivIcon(
+                        html=f'<div style="background:#4A90D9;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 4px rgba(0,0,0,0.3);">📌</div>',
+                        icon_size=(28, 28), icon_anchor=(14, 14)
+                    )
+                ).add_to(m)
+            except (ValueError, TypeError):
+                pass
+
         st_folium(m, use_container_width=True, height=500)
 
         # 해당 일차 일정 목록
@@ -441,6 +474,33 @@ with tab_trip:
             f'</table>',
             unsafe_allow_html=True
         )
+
+        # 주요메모 섹션
+        if memo_places:
+            st.divider()
+            st.subheader("📌 주요메모 장소")
+            memo_tr = ""
+            for r in memo_places:
+                mplace = str(r.get("장소명", "") or r.get("내용", "")).strip()
+                mmemo  = str(r.get("메모", "")).strip().replace("\n", "<br>")
+                memo_tr += (
+                    f'<tr style="border-bottom:1px solid rgba(128,128,128,0.2);">'
+                    f'<td style="padding:8px 6px;font-size:15px;">📌</td>'
+                    f'<td style="padding:8px 6px;font-weight:500;color:inherit;">{mplace}</td>'
+                    f'<td style="padding:8px 6px;font-size:13px;color:inherit;opacity:0.85;">{mmemo}</td>'
+                    f'</tr>'
+                )
+            st.markdown(
+                f'<table style="width:100%;border-collapse:collapse;font-size:14px;color:inherit;">'
+                f'<thead><tr style="background:rgba(74,144,217,0.15);font-weight:bold;text-align:left;">'
+                f'<th style="padding:8px 6px;width:30px;"></th>'
+                f'<th style="padding:8px 6px;">장소</th>'
+                f'<th style="padding:8px 6px;">메모</th>'
+                f'</tr></thead>'
+                f'<tbody>{memo_tr}</tbody>'
+                f'</table>',
+                unsafe_allow_html=True
+            )
 
 # --- [3. AI 여행 비서 단계] ---
 with tab_ai:
