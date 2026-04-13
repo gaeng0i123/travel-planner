@@ -28,4 +28,5 @@ fi
 
 # 3. Streamlit 서버 실행
 echo "🌐 서버를 실행합니다! 브라우저 창이 열릴 때까지 잠시만 기다려 주세요..."
+export LOCAL_DEV=1
 streamlit run app.py

@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
@@ -93,7 +94,10 @@ st.markdown("""
 
 # --- [로그인 시스템] ---
 def check_password():
-    """로그인 상태를 확인하고 로그인 폼을 표시합니다."""
+    """로컬 환경(LOCAL_DEV=1)에서는 로그인 스킵, 웹 배포 시에만 비밀번호 요구."""
+    if os.environ.get("LOCAL_DEV") == "1":
+        return True
+
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
 
@@ -330,8 +334,15 @@ with tab_prep:
 with tab_trip:
     st.header("🛵 현지 실시간 관리")
 
-    # 확정된 일정만 필터링
-    confirmed = [r for r in data["itinerary"] if str(r.get("확정", "")).strip().lower() in ("true", "1", "yes", "확정", "ok")]
+    category_icon = {"에어컨카페": "☕", "스파": "💆"}
+
+    # 확정된 일정 필터링 (내용이 있는 행만 — 빈 ok 행은 일차 버튼에서 제외)
+    confirmed = [
+        r for r in data["itinerary"]
+        if str(r.get("확정", "")).strip().lower() in ("true", "1", "yes", "확정", "ok")
+        and str(r.get("내용", "")).strip()
+        and str(r.get("날짜", "")).strip()
+    ]
     df_confirmed = pd.DataFrame(confirmed) if confirmed else pd.DataFrame()
 
     # 주요메모 장소 필터링 (좌표 있는 것만)
@@ -342,166 +353,200 @@ with tab_trip:
         and str(r.get("lon", "")).strip() not in ("", "nan")
     ]
 
-    if df_confirmed.empty:
+    # 카테고리 목록 (memo_places 기준)
+    categories = []
+    for r in memo_places:
+        cat = str(r.get("내용", "")).strip()
+        if cat and cat not in categories:
+            categories.append(cat)
+
+    if df_confirmed.empty and not memo_places:
         st.info("여행 준비 탭 예상일정에서 일정을 확정하면 여기에 표시됩니다.")
     else:
-        # 날짜 기준 1일차, 2일차... 버튼
-        dates = sorted(df_confirmed["날짜"].dropna().unique())
-        day_labels = [f"{i+1}일차" for i in range(len(dates))]
-
+        # ── 세션 상태 초기화 ────────────────────────────────────────────────
+        if "view_mode" not in st.session_state:
+            st.session_state.view_mode = "day"
         if "selected_day" not in st.session_state:
             st.session_state.selected_day = 0
+        if "memo_category" not in st.session_state or st.session_state.memo_category not in categories:
+            st.session_state.memo_category = categories[0] if categories else ""
 
-        cols = st.columns(len(dates))
-        for i, (col, label) in enumerate(zip(cols, day_labels)):
+        # ── 1행: 일차 버튼 (고정 5일) ───────────────────────────────────────
+        TRIP_DAYS = [
+            ("5/30", "1일차(5/30,토)"),
+            ("5/31", "2일차(5/31,일)"),
+            ("6/1",  "3일차(6/1,월)"),
+            ("6/2",  "4일차(6/2,화)"),
+            ("6/3",  "5일차(6/3,수)"),
+        ]
+        dates      = [d for d, _ in TRIP_DAYS]
+        day_labels = [l for _, l in TRIP_DAYS]
+
+        day_cols = st.columns(len(TRIP_DAYS))
+        for i, (col, (_, label)) in enumerate(zip(day_cols, TRIP_DAYS)):
             with col:
-                btn_type = "primary" if st.session_state.selected_day == i else "secondary"
-                if st.button(label, use_container_width=True, type=btn_type, key=f"day_{i}"):
+                is_active = st.session_state.view_mode == "day" and st.session_state.selected_day == i
+                if st.button(label, use_container_width=True,
+                             type="primary" if is_active else "secondary",
+                             key=f"day_{i}"):
+                    st.session_state.view_mode = "day"
                     st.session_state.selected_day = i
+                    st.session_state.pop("map_center", None)
+                    st.session_state.pop("map_zoom", None)
                     st.rerun()
 
-        # 선택된 날짜 일정
-        selected_date = dates[st.session_state.selected_day]
-        df_day = df_confirmed[df_confirmed["날짜"] == selected_date].reset_index(drop=True)
-        st.caption(f"📅 {selected_date} ({day_labels[st.session_state.selected_day]}) — 확정 {len(df_day)}개")
+        # ── 2행: 카테고리 버튼 (에어컨카페 / 스파) + 전체동선 ────────────────
+        btn2_labels = [(cat, category_icon.get(cat, "📌"), "memo") for cat in categories]
+        btn2_labels.append(("전체동선", "🗺️", "all"))
+        btn2_cols = st.columns(len(btn2_labels))
+        for ci, (col, (cat, icon, mode)) in enumerate(zip(btn2_cols, btn2_labels)):
+            with col:
+                if mode == "memo":
+                    is_active = st.session_state.view_mode == "memo" and st.session_state.memo_category == cat
+                else:
+                    is_active = st.session_state.view_mode == "all"
+                if st.button(f"{icon} {cat}", use_container_width=True,
+                             type="primary" if is_active else "secondary",
+                             key=f"cat_{ci}"):
+                    st.session_state.view_mode = mode
+                    if mode == "memo":
+                        st.session_state.memo_category = cat
+                    st.session_state.pop("map_center", None)
+                    st.session_state.pop("map_zoom", None)
+                    st.rerun()
 
-        # 지도 (다낭 중심)
-        m = folium.Map(location=[16.047079, 108.206230], zoom_start=13)
-
-        if "lat" in df_day.columns and "lon" in df_day.columns:
-            pins = []
-            coord_count = {}
-
-            for i, row in df_day.iterrows():
-                if pd.notna(row.get("lat")) and pd.notna(row.get("lon")) and row.get("lat") != "" and row.get("lon") != "":
-                    lat, lon = float(row["lat"]), float(row["lon"])
-                    key = (lat, lon)
-                    count = coord_count.get(key, 0)
-                    coord_count[key] = count + 1
-                    # 같은 좌표면 살짝 오프셋 (나선형으로 벌림)
-                    offset = 0.00015
-                    offsets = [(0,0),(offset,0),(-offset,0),(0,offset),(0,-offset),(offset,offset),(-offset,-offset)]
-                    if count < len(offsets):
-                        lat += offsets[count][0]
-                        lon += offsets[count][1]
-                    pins.append((lat, lon, i+1, row.get('시간',''), row.get('내용',''), row.get('장소명','')))
-
-            # 경로 선 연결
-            if len(pins) >= 2:
-                folium.PolyLine(
-                    locations=[(p[0], p[1]) for p in pins],
-                    color="#FF4B4B", weight=2.5, opacity=0.7, dash_array="6"
-                ).add_to(m)
-
-            # 핀 찍기
-            for lat, lon, num, time_val, content, place in pins:
-                popup_html = f"<b>{num}. {place or content}</b><br>{time_val}"
-                folium.Marker(
-                    location=[lat, lon],
-                    popup=folium.Popup(popup_html, max_width=200),
-                    tooltip=f"{num}. {place or content}",
-                    icon=folium.DivIcon(
-                        html=f'<div style="background:#FF4B4B;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.3);">{num}</div>',
-                        icon_size=(28, 28), icon_anchor=(14, 14)
-                    )
-                ).add_to(m)
-        else:
-            st.info("📍 구글 지도 링크에서 좌표를 추출하면 핀이 표시됩니다.")
-
-        # 주요메모 핀 (파란 📌, 모든 일차 공통 표시)
-        for r in memo_places:
-            try:
-                mlat, mlon = float(r["lat"]), float(r["lon"])
-                mplace = str(r.get("장소명", "") or r.get("내용", "")).strip()
-                mmemo  = str(r.get("메모", "")).strip()
-                popup_html = f"<b>📌 {mplace}</b>" + (f"<br>{mmemo}" if mmemo else "")
-                folium.Marker(
-                    location=[mlat, mlon],
-                    popup=folium.Popup(popup_html, max_width=200),
-                    tooltip=f"📌 {mplace}",
-                    icon=folium.DivIcon(
-                        html=f'<div style="background:#4A90D9;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 4px rgba(0,0,0,0.3);">📌</div>',
-                        icon_size=(28, 28), icon_anchor=(14, 14)
-                    )
-                ).add_to(m)
-            except (ValueError, TypeError):
-                pass
-
-        st_folium(m, use_container_width=True, height=500)
-
-        # 해당 일차 일정 목록
-        st.subheader(f"📋 {day_labels[st.session_state.selected_day]} 확정 일정")
-
+        # ── 콘텐츠 영역 ─────────────────────────────────────────────────────
         def val(v):
             return "" if pd.isna(v) or str(v).strip() == "" else str(v).strip()
 
-        rows = []
-        for i, row in df_day.iterrows():
-            duration_str = val(row.get('소요시간'))
-            transport_str = val(row.get('이동시간'))
-            duration_combined = f"{duration_str}({transport_str})" if duration_str and transport_str else duration_str or ""
-            rows.append({
-                "#": i + 1,
-                "시간": val(row.get('시간')),
-                "내용": val(row.get('내용')),
-                "소요(이동)": duration_combined,
-                "메모": val(row.get('메모')),
-            })
+        if st.session_state.view_mode == "day":
+            if st.session_state.selected_day >= len(TRIP_DAYS):
+                st.session_state.selected_day = 0
 
-        tr_html = ""
-        for r in rows:
-            memo_html = str(r["메모"]).replace("\n", "<br>")
-            tr_html += (
-                f'<tr style="border-bottom:1px solid rgba(128,128,128,0.2);">'
-                f'<td style="padding:8px 6px;width:30px;text-align:center;font-weight:bold;color:inherit;">{r["#"]}</td>'
-                f'<td style="padding:8px 6px;width:70px;white-space:nowrap;color:inherit;opacity:0.75;">{r["시간"]}</td>'
-                f'<td style="padding:8px 6px;width:180px;font-weight:500;color:inherit;">{r["내용"]}</td>'
-                f'<td style="padding:8px 6px;width:110px;color:inherit;opacity:0.8;font-size:13px;">{r["소요(이동)"]}</td>'
-                f'<td style="padding:8px 6px;font-size:13px;color:inherit;opacity:0.85;">{memo_html}</td>'
-                f'</tr>'
-            )
+            selected_date, selected_label = TRIP_DAYS[st.session_state.selected_day]
+            df_day = df_confirmed[df_confirmed["날짜"] == selected_date].reset_index(drop=True) if not df_confirmed.empty else pd.DataFrame()
+            st.caption(f"📅 {selected_label} — 확정 {len(df_day)}개")
 
-        st.markdown(
-            f'<table style="width:100%;border-collapse:collapse;font-size:14px;color:inherit;">'
-            f'<thead><tr style="background:rgba(128,128,128,0.1);font-weight:bold;text-align:left;">'
-            f'<th style="padding:8px 6px;width:30px;">#</th>'
-            f'<th style="padding:8px 6px;width:70px;">시간</th>'
-            f'<th style="padding:8px 6px;width:180px;">내용</th>'
-            f'<th style="padding:8px 6px;width:110px;">소요(이동)</th>'
-            f'<th style="padding:8px 6px;">메모</th>'
-            f'</tr></thead>'
-            f'<tbody>{tr_html}</tbody>'
-            f'</table>',
-            unsafe_allow_html=True
-        )
+            # 지도 (장소명 클릭 시 해당 핀으로 이동)
+            map_center = st.session_state.get("map_center", [16.047079, 108.206230])
+            map_zoom   = st.session_state.get("map_zoom", 13)
+            m = folium.Map(location=map_center, zoom_start=map_zoom)
 
-        # 주요메모 섹션 (카테고리 버튼)
-        if memo_places:
-            st.divider()
-            st.subheader("📌 주요메모 장소")
+            # 일차 핀 + 경로선
+            pins = []
+            if not df_day.empty and "lat" in df_day.columns and "lon" in df_day.columns:
+                coord_count = {}
+                for i, row in df_day.iterrows():
+                    if pd.notna(row.get("lat")) and pd.notna(row.get("lon")) and row.get("lat") != "" and row.get("lon") != "":
+                        lat, lon = float(row["lat"]), float(row["lon"])
+                        key = (lat, lon)
+                        count = coord_count.get(key, 0)
+                        coord_count[key] = count + 1
+                        offset = 0.00015
+                        offsets = [(0,0),(offset,0),(-offset,0),(0,offset),(0,-offset),(offset,offset),(-offset,-offset)]
+                        if count < len(offsets):
+                            lat += offsets[count][0]
+                            lon += offsets[count][1]
+                        pins.append((lat, lon, i+1, row.get('시간',''), row.get('내용',''), row.get('장소명','')))
 
-            # 카테고리 목록 (내용 컬럼 기준)
-            category_icon = {"에어컨카페": "☕", "스파": "💆"}
-            categories = []
+                if len(pins) >= 2:
+                    folium.PolyLine(
+                        locations=[(p[0], p[1]) for p in pins],
+                        color="#FF4B4B", weight=2.5, opacity=0.7, dash_array="6"
+                    ).add_to(m)
+
+                for lat, lon, num, time_val, content, place in pins:
+                    popup_html = f"<b>{num}. {place or content}</b><br>{time_val}"
+                    folium.Marker(
+                        location=[lat, lon],
+                        popup=folium.Popup(popup_html, max_width=200),
+                        tooltip=f"{num}. {place or content}",
+                        icon=folium.DivIcon(
+                            html=f'<div style="background:#FF4B4B;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.3);">{num}</div>',
+                            icon_size=(28, 28), icon_anchor=(14, 14)
+                        )
+                    ).add_to(m)
+
+            # 주요메모 핀 (파란 📌)
             for r in memo_places:
-                cat = str(r.get("내용", "")).strip()
-                if cat and cat not in categories:
-                    categories.append(cat)
+                try:
+                    mlat, mlon = float(r["lat"]), float(r["lon"])
+                    mplace = str(r.get("장소명", "") or r.get("내용", "")).strip()
+                    mmemo  = str(r.get("메모", "")).strip()
+                    popup_html = f"<b>📌 {mplace}</b>" + (f"<br>{mmemo}" if mmemo else "")
+                    folium.Marker(
+                        location=[mlat, mlon],
+                        popup=folium.Popup(popup_html, max_width=200),
+                        tooltip=f"📌 {mplace}",
+                        icon=folium.DivIcon(
+                            html=f'<div style="background:#4A90D9;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 4px rgba(0,0,0,0.3);">📌</div>',
+                            icon_size=(28, 28), icon_anchor=(14, 14)
+                        )
+                    ).add_to(m)
+                except (ValueError, TypeError):
+                    pass
 
-            if "memo_category" not in st.session_state or st.session_state.memo_category not in categories:
-                st.session_state.memo_category = categories[0] if categories else ""
+            st_folium(m, use_container_width=True, height=500)
 
-            cat_cols = st.columns(len(categories))
-            for ci, (col, cat) in enumerate(zip(cat_cols, categories)):
-                with col:
-                    icon = category_icon.get(cat, "📌")
-                    btn_type = "primary" if st.session_state.memo_category == cat else "secondary"
-                    if st.button(f"{icon} {cat}", use_container_width=True, type=btn_type, key=f"memo_cat_{ci}"):
-                        st.session_state.memo_category = cat
+            # 해당 일차 일정 목록
+            st.subheader(f"📋 {selected_label} 확정 일정")
+
+            # 헤더
+            hc = st.columns([0.3, 0.7, 1.6, 1.8, 1.2, 1.8])
+            for col, h in zip(hc, ["#", "시간", "장소명", "내용", "소요(이동)", "메모"]):
+                col.markdown(f"<span style='font-size:12px;font-weight:bold;opacity:0.6;'>{h}</span>", unsafe_allow_html=True)
+            st.divider()
+
+            for i, row in df_day.iterrows():
+                duration_str = val(row.get('소요시간'))
+                transport_str = val(row.get('이동시간'))
+                duration_combined = f"{duration_str}({transport_str})" if duration_str and transport_str else duration_str or ""
+                place = val(row.get('장소명'))
+                lat_v = val(row.get('lat'))
+                lon_v = val(row.get('lon'))
+
+                rc = st.columns([0.3, 0.7, 1.6, 1.8, 1.2, 1.8])
+                rc[0].markdown(f"<b style='font-size:14px;'>{i+1}</b>", unsafe_allow_html=True)
+                rc[1].markdown(f"<span style='font-size:13px;opacity:0.75;'>{val(row.get('시간'))}</span>", unsafe_allow_html=True)
+                if place and lat_v and lon_v:
+                    if rc[2].button(f"📍 {place}", key=f"place_{i}", use_container_width=True):
+                        st.session_state.map_center = [float(lat_v), float(lon_v)]
+                        st.session_state.map_zoom = 16
                         st.rerun()
+                else:
+                    rc[2].markdown(f"<span style='font-size:14px;'>{place or '—'}</span>", unsafe_allow_html=True)
+                rc[3].markdown(f"<span style='font-size:14px;font-weight:500;'>{val(row.get('내용'))}</span>", unsafe_allow_html=True)
+                rc[4].markdown(f"<span style='font-size:13px;opacity:0.8;'>{duration_combined}</span>", unsafe_allow_html=True)
+                rc[5].markdown(f"<span style='font-size:13px;opacity:0.85;'>{val(row.get('메모')).replace(chr(10), '<br>')}</span>", unsafe_allow_html=True)
 
-            # 선택된 카테고리 목록 표시
+        elif st.session_state.view_mode == "memo" and st.session_state.memo_category:
+            # 카테고리 모드: 선택된 카테고리 장소 목록 + 지도
             selected_memos = [r for r in memo_places if str(r.get("내용","")).strip() == st.session_state.memo_category]
+            icon = category_icon.get(st.session_state.memo_category, "📌")
+            st.caption(f"{icon} {st.session_state.memo_category} — {len(selected_memos)}개")
+
+            # 카테고리 지도
+            m = folium.Map(location=[16.047079, 108.206230], zoom_start=12)
+            for idx, r in enumerate(selected_memos, start=1):
+                try:
+                    mlat, mlon = float(r["lat"]), float(r["lon"])
+                    mplace = str(r.get("장소명", "") or "").strip()
+                    mmemo  = str(r.get("메모", "")).strip()
+                    popup_html = f"<b>{idx}. {mplace}</b>" + (f"<br>{mmemo}" if mmemo else "")
+                    folium.Marker(
+                        location=[mlat, mlon],
+                        popup=folium.Popup(popup_html, max_width=200),
+                        tooltip=f"{idx}. {mplace}",
+                        icon=folium.DivIcon(
+                            html=f'<div style="background:#4A90D9;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 4px rgba(0,0,0,0.3);">📌</div>',
+                            icon_size=(28, 28), icon_anchor=(14, 14)
+                        )
+                    ).add_to(m)
+                except (ValueError, TypeError):
+                    pass
+            st_folium(m, use_container_width=True, height=400)
+
+            # 카테고리 장소 목록 테이블
             memo_tr = ""
             for r in selected_memos:
                 mplace = str(r.get("장소명", "") or "").strip()
@@ -525,8 +570,62 @@ with tab_trip:
                     f'</table>',
                     unsafe_allow_html=True
                 )
-            else:
-                st.caption("좌표가 있는 장소만 지도 핀으로 표시됩니다.")
+
+        elif st.session_state.view_mode == "all":
+            # 전체 동선: 모든 일차 확정 일정을 한 지도에
+            day_colors = ["#FF4B4B", "#FF8C00", "#2ECC71", "#9B59B6", "#1ABC9C"]
+            st.caption("🗺️ 전체동선 — 5일 확정 일정")
+            m = folium.Map(location=[16.047079, 108.206230], zoom_start=12)
+
+            for day_idx, (date, label) in enumerate(TRIP_DAYS):
+                color = day_colors[day_idx % len(day_colors)]
+                df_d = df_confirmed[df_confirmed["날짜"] == date].reset_index(drop=True) if not df_confirmed.empty else pd.DataFrame()
+                if df_d.empty or "lat" not in df_d.columns:
+                    continue
+                pins_d = []
+                coord_count = {}
+                for i, row in df_d.iterrows():
+                    if pd.notna(row.get("lat")) and pd.notna(row.get("lon")) and row.get("lat") != "" and row.get("lon") != "":
+                        lat, lon = float(row["lat"]), float(row["lon"])
+                        key = (lat, lon)
+                        count = coord_count.get(key, 0)
+                        coord_count[key] = count + 1
+                        offset = 0.00015
+                        offsets = [(0,0),(offset,0),(-offset,0),(0,offset),(0,-offset),(offset,offset),(-offset,-offset)]
+                        if count < len(offsets):
+                            lat += offsets[count][0]
+                            lon += offsets[count][1]
+                        pins_d.append((lat, lon, i+1, row.get('시간',''), row.get('내용',''), row.get('장소명','')))
+
+                if len(pins_d) >= 2:
+                    folium.PolyLine(
+                        locations=[(p[0], p[1]) for p in pins_d],
+                        color=color, weight=2.5, opacity=0.8, dash_array="6",
+                        tooltip=label
+                    ).add_to(m)
+
+                for lat, lon, num, time_val, content, place in pins_d:
+                    popup_html = f"<b>[{label}] {num}. {place or content}</b><br>{time_val}"
+                    folium.Marker(
+                        location=[lat, lon],
+                        popup=folium.Popup(popup_html, max_width=200),
+                        tooltip=f"[{label}] {num}. {place or content}",
+                        icon=folium.DivIcon(
+                            html=f'<div style="background:{color};color:white;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;box-shadow:0 2px 4px rgba(0,0,0,0.3);">{num}</div>',
+                            icon_size=(26, 26), icon_anchor=(13, 13)
+                        )
+                    ).add_to(m)
+
+            st_folium(m, use_container_width=True, height=600)
+
+            # 일차별 범례
+            legend_html = "".join(
+                f'<span style="display:inline-block;margin:4px 8px;font-size:13px;">'
+                f'<span style="background:{day_colors[i % len(day_colors)]};color:white;border-radius:50%;padding:2px 7px;font-weight:bold;">●</span> {label}'
+                f'</span>'
+                for i, (_, label) in enumerate(TRIP_DAYS)
+            )
+            st.markdown(legend_html, unsafe_allow_html=True)
 
 # --- [3. AI 여행 비서 단계] ---
 with tab_ai:
