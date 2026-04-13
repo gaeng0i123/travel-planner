@@ -288,19 +288,36 @@ with tab_trip:
 
         # 해당 일차 일정 목록
         st.subheader(f"📋 {day_labels[st.session_state.selected_day]} 확정 일정")
+
         def val(v):
             return "" if pd.isna(v) or str(v).strip() == "" else str(v).strip()
 
+        rows = []
         for i, row in df_day.iterrows():
-            time_str = val(row.get('시간'))
-            content_str = val(row.get('내용'))
-            memo_str = val(row.get('메모'))
             duration_str = val(row.get('소요시간'))
             transport_str = val(row.get('이동시간'))
-            time_badge = f"`{time_str}` " if time_str else ""
-            memo_part = f" — {memo_str}" if memo_str else ""
-            duration_part = f" — {duration_str}({transport_str})" if duration_str and transport_str else f" — {duration_str}" if duration_str else ""
-            st.markdown(f"**{i+1}.** {time_badge}{content_str}{memo_part}{duration_part}")
+            duration_combined = f"{duration_str}({transport_str})" if duration_str and transport_str else duration_str or ""
+            rows.append({
+                "#": i + 1,
+                "시간": val(row.get('시간')),
+                "내용": val(row.get('내용')),
+                "소요(이동)": duration_combined,
+                "메모": val(row.get('메모')),
+            })
+
+        df_display = pd.DataFrame(rows)
+        st.dataframe(
+            df_display,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "#": st.column_config.NumberColumn("#", width=40),
+                "시간": st.column_config.TextColumn("시간", width="small"),
+                "내용": st.column_config.TextColumn("내용", width="medium"),
+                "소요(이동)": st.column_config.TextColumn("소요(이동)", width="small"),
+                "메모": st.column_config.TextColumn("메모", width="large"),
+            }
+        )
 
 # --- [3. AI 여행 비서 단계] ---
 with tab_ai:
