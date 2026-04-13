@@ -140,7 +140,7 @@ with tab_prep:
             df_b = pd.DataFrame(data["budget"])
             st.dataframe(df_b, use_container_width=True)
             total_b = pd.to_numeric(df_b["cost"], errors="coerce").sum()
-            st.metric("총 지출 예정금액", f"{total_b:,.0f} 원")
+            st.metric("총 사전 지출금액", f"{total_b:,.0f} 원")
         else:
             st.write("데이터를 입력해 주세요.")
 
