@@ -176,7 +176,7 @@ with tab_prep:
     st.header("🗓️ 3. 예상 일정")
     if data["itinerary"]:
         df_i = pd.DataFrame(data["itinerary"])
-        df_i["확정"] = df_i["확정"].apply(lambda x: str(x).upper() in ("TRUE", "1", "YES", "확정"))
+        df_i["확정"] = df_i["확정"].apply(lambda x: str(x).strip().lower() in ("true", "1", "yes", "확정", "ok"))
         edited = st.data_editor(
             df_i,
             use_container_width=True,
@@ -197,7 +197,9 @@ with tab_prep:
             disabled=["날짜","요일","시간","내용","메모","장소명","구글지도","lat","lon"],
         )
         if not edited["확정"].equals(df_i["확정"]):
-            update_sheet(edited, "상세일정")
+            save_df = edited.copy()
+            save_df["확정"] = save_df["확정"].apply(lambda x: "ok" if x else "")
+            update_sheet(save_df, "상세일정")
             st.success("확정 상태가 저장되었습니다!")
             st.rerun()
     else:
@@ -208,7 +210,7 @@ with tab_trip:
     st.header("🛵 현지 실시간 관리")
 
     # 확정된 일정만 필터링
-    confirmed = [r for r in data["itinerary"] if str(r.get("확정", "")).upper() in ("TRUE", "1", "YES", "확정")]
+    confirmed = [r for r in data["itinerary"] if str(r.get("확정", "")).strip().lower() in ("true", "1", "yes", "확정", "ok")]
     df_confirmed = pd.DataFrame(confirmed) if confirmed else pd.DataFrame()
 
     if df_confirmed.empty:
