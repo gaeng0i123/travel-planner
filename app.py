@@ -243,16 +243,42 @@ with tab_trip:
         m = folium.Map(location=[16.047079, 108.206230], zoom_start=13)
 
         if "lat" in df_day.columns and "lon" in df_day.columns:
+            pins = []
+            coord_count = {}
+
             for i, row in df_day.iterrows():
-                if pd.notna(row.get("lat")) and pd.notna(row.get("lon")):
-                    folium.Marker(
-                        location=[float(row["lat"]), float(row["lon"])],
-                        popup=f"{row['시간']} {row['내용']}",
-                        tooltip=f"{i+1}. {row['내용']}",
-                        icon=folium.DivIcon(
-                            html=f'<div style="background:#FF4B4B;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.3);">{i+1}</div>'
-                        )
-                    ).add_to(m)
+                if pd.notna(row.get("lat")) and pd.notna(row.get("lon")) and row.get("lat") != "" and row.get("lon") != "":
+                    lat, lon = float(row["lat"]), float(row["lon"])
+                    key = (lat, lon)
+                    count = coord_count.get(key, 0)
+                    coord_count[key] = count + 1
+                    # 같은 좌표면 살짝 오프셋 (나선형으로 벌림)
+                    offset = 0.00015
+                    offsets = [(0,0),(offset,0),(-offset,0),(0,offset),(0,-offset),(offset,offset),(-offset,-offset)]
+                    if count < len(offsets):
+                        lat += offsets[count][0]
+                        lon += offsets[count][1]
+                    pins.append((lat, lon, i+1, row.get('시간',''), row.get('내용',''), row.get('장소명','')))
+
+            # 경로 선 연결
+            if len(pins) >= 2:
+                folium.PolyLine(
+                    locations=[(p[0], p[1]) for p in pins],
+                    color="#FF4B4B", weight=2.5, opacity=0.7, dash_array="6"
+                ).add_to(m)
+
+            # 핀 찍기
+            for lat, lon, num, time_val, content, place in pins:
+                popup_html = f"<b>{num}. {place or content}</b><br>{time_val}"
+                folium.Marker(
+                    location=[lat, lon],
+                    popup=folium.Popup(popup_html, max_width=200),
+                    tooltip=f"{num}. {place or content}",
+                    icon=folium.DivIcon(
+                        html=f'<div style="background:#FF4B4B;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.3);">{num}</div>',
+                        icon_size=(28, 28), icon_anchor=(14, 14)
+                    )
+                ).add_to(m)
         else:
             st.info("📍 구글 지도 링크에서 좌표를 추출하면 핀이 표시됩니다.")
 
