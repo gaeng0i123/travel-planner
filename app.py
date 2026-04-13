@@ -64,14 +64,15 @@ def update_sheet(df, worksheet_name):
     conn.update(spreadsheet=SHEET_URL, worksheet=worksheet_name, data=df)
     st.cache_data.clear()
 
-# 데이터 불러오기 로직
-if st.sidebar.button("🔄 시트 데이터 실시간 동기화"):
-    st.cache_data.clear()
-    st.rerun()
-
 data = load_all_data()
 
 # 탭 구성
+col_title, col_btn = st.columns([5, 1])
+with col_btn:
+    if st.button("🔄 동기화", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
+
 tab_prep, tab_trip, tab_ai = st.tabs(["🏗️ 여행 준비 (Live Sheets)", "🛵 여행 현지 (동선/영수증)", "💬 AI 여행 비서"])
 
 # --- [1. 여행 준비 단계] ---
