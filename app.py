@@ -452,17 +452,19 @@ with tab_trip:
                         if (Math.abs(aTop - cTop) > 5 && main) main.scrollTop += (aTop - cTop);
                     }
 
+                    var safetyTimer = setTimeout(applyScroll, 900);
+
                     function onScroll() {
                         if (Date.now() - lastOurScroll < 400) return;
                         clearTimeout(debounce);
-                        debounce = setTimeout(applyScroll, 80);
+                        debounce = setTimeout(function() {
+                            clearTimeout(safetyTimer); // 리스너 성공 시 안전망 취소
+                            applyScroll();
+                        }, 80);
                     }
                     var target = main || window.parent;
                     target.addEventListener('scroll', onScroll);
                     setTimeout(function(){ target.removeEventListener('scroll', onScroll); }, 5000);
-
-                    // 스크롤 이벤트 없을 때 안전망
-                    setTimeout(applyScroll, 900);
                 })();
                 </script>
                 """, height=1)
@@ -608,17 +610,19 @@ with tab_trip:
                         if (Math.abs(aTop - cTop) > 5 && main) main.scrollTop += (aTop - cTop);
                     }
 
+                    var safetyTimer = setTimeout(applyScroll, 900);
+
                     function onScroll() {
                         if (Date.now() - lastOurScroll < 400) return;
                         clearTimeout(debounce);
-                        debounce = setTimeout(applyScroll, 80);
+                        debounce = setTimeout(function() {
+                            clearTimeout(safetyTimer); // 리스너 성공 시 안전망 취소
+                            applyScroll();
+                        }, 80);
                     }
                     var target = main || window.parent;
                     target.addEventListener('scroll', onScroll);
                     setTimeout(function(){ target.removeEventListener('scroll', onScroll); }, 5000);
-
-                    // 스크롤 이벤트 없을 때 안전망
-                    setTimeout(applyScroll, 900);
                 })();
                 </script>
                 """, height=1)
