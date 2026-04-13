@@ -187,8 +187,10 @@ with tab_prep:
                 "시간": st.column_config.TextColumn("시간", width="small"),
                 "확정": st.column_config.CheckboxColumn("확정", width="small"),
                 "내용": st.column_config.TextColumn("내용", width="large"),
-                "구글지도": st.column_config.LinkColumn("구글지도", width="medium"),
                 "메모": st.column_config.TextColumn("메모", width="medium"),
+                "구글지도": st.column_config.LinkColumn("구글지도", width="medium"),
+                "lat": st.column_config.NumberColumn("lat", width="small"),
+                "lon": st.column_config.NumberColumn("lon", width="small"),
             }
         )
     else:
