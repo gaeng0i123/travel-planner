@@ -475,13 +475,36 @@ with tab_trip:
             unsafe_allow_html=True
         )
 
-        # 주요메모 섹션
+        # 주요메모 섹션 (카테고리 버튼)
         if memo_places:
             st.divider()
             st.subheader("📌 주요메모 장소")
-            memo_tr = ""
+
+            # 카테고리 목록 (내용 컬럼 기준)
+            category_icon = {"에어컨카페": "☕", "스파": "💆"}
+            categories = []
             for r in memo_places:
-                mplace = str(r.get("장소명", "") or r.get("내용", "")).strip()
+                cat = str(r.get("내용", "")).strip()
+                if cat and cat not in categories:
+                    categories.append(cat)
+
+            if "memo_category" not in st.session_state or st.session_state.memo_category not in categories:
+                st.session_state.memo_category = categories[0] if categories else ""
+
+            cat_cols = st.columns(len(categories))
+            for ci, (col, cat) in enumerate(zip(cat_cols, categories)):
+                with col:
+                    icon = category_icon.get(cat, "📌")
+                    btn_type = "primary" if st.session_state.memo_category == cat else "secondary"
+                    if st.button(f"{icon} {cat}", use_container_width=True, type=btn_type, key=f"memo_cat_{ci}"):
+                        st.session_state.memo_category = cat
+                        st.rerun()
+
+            # 선택된 카테고리 목록 표시
+            selected_memos = [r for r in memo_places if str(r.get("내용","")).strip() == st.session_state.memo_category]
+            memo_tr = ""
+            for r in selected_memos:
+                mplace = str(r.get("장소명", "") or "").strip()
                 mmemo  = str(r.get("메모", "")).strip().replace("\n", "<br>")
                 memo_tr += (
                     f'<tr style="border-bottom:1px solid rgba(128,128,128,0.2);">'
@@ -490,17 +513,20 @@ with tab_trip:
                     f'<td style="padding:8px 6px;font-size:13px;color:inherit;opacity:0.85;">{mmemo}</td>'
                     f'</tr>'
                 )
-            st.markdown(
-                f'<table style="width:100%;border-collapse:collapse;font-size:14px;color:inherit;">'
-                f'<thead><tr style="background:rgba(74,144,217,0.15);font-weight:bold;text-align:left;">'
-                f'<th style="padding:8px 6px;width:30px;"></th>'
-                f'<th style="padding:8px 6px;">장소</th>'
-                f'<th style="padding:8px 6px;">메모</th>'
-                f'</tr></thead>'
-                f'<tbody>{memo_tr}</tbody>'
-                f'</table>',
-                unsafe_allow_html=True
-            )
+            if memo_tr:
+                st.markdown(
+                    f'<table style="width:100%;border-collapse:collapse;font-size:14px;color:inherit;">'
+                    f'<thead><tr style="background:rgba(74,144,217,0.15);font-weight:bold;text-align:left;">'
+                    f'<th style="padding:8px 6px;width:30px;"></th>'
+                    f'<th style="padding:8px 6px;">장소</th>'
+                    f'<th style="padding:8px 6px;">메모</th>'
+                    f'</tr></thead>'
+                    f'<tbody>{memo_tr}</tbody>'
+                    f'</table>',
+                    unsafe_allow_html=True
+                )
+            else:
+                st.caption("좌표가 있는 장소만 지도 핀으로 표시됩니다.")
 
 # --- [3. AI 여행 비서 단계] ---
 with tab_ai:
