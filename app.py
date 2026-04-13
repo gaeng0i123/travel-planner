@@ -51,13 +51,15 @@ def load_all_data():
         budget_df = conn.read(spreadsheet=SHEET_URL, worksheet="budget", ttl=0)
         checklist_df = conn.read(spreadsheet=SHEET_URL, worksheet="checklist", ttl=0)
         hotels_df = conn.read(spreadsheet=SHEET_URL, worksheet="hotels", ttl=0)
+        itinerary_df = conn.read(spreadsheet=SHEET_URL, worksheet="상세일정", ttl=0)
         return {
             "budget": budget_df.to_dict('records'),
             "checklist": checklist_df.to_dict('records'),
             "hotels": hotels_df.to_dict('records'),
+            "itinerary": itinerary_df.to_dict('records'),
         }
     except Exception as e:
-        return {"budget": [], "checklist": [], "hotels": []}
+        return {"budget": [], "checklist": [], "hotels": [], "itinerary": []}
 
 # 데이터 저장 로직 (구글 시트 업데이트)
 def update_sheet(df, worksheet_name):
@@ -167,6 +169,29 @@ with tab_prep:
                     df_c.at[i, "done"] = checked
                     update_sheet(df_c, "checklist")
                     st.rerun()
+
+    st.divider()
+
+    # (3) 예상 일정
+    st.header("🗓️ 3. 예상 일정")
+    if data["itinerary"]:
+        df_i = pd.DataFrame(data["itinerary"])
+        st.dataframe(
+            df_i,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "날짜": st.column_config.TextColumn("날짜", width="small"),
+                "요일": st.column_config.TextColumn("요일", width="small"),
+                "시간": st.column_config.TextColumn("시간", width="small"),
+                "확정": st.column_config.CheckboxColumn("확정", width="small"),
+                "내용": st.column_config.TextColumn("내용", width="large"),
+                "구글지도": st.column_config.LinkColumn("구글지도", width="medium"),
+                "메모": st.column_config.TextColumn("메모", width="medium"),
+            }
+        )
+    else:
+        st.write("구글 시트 '상세일정' 탭에 데이터를 입력해 주세요.")
 
 # --- [2. 여행 현지 단계] ---
 with tab_trip:
