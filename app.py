@@ -186,11 +186,8 @@ with tab_ai:
     thinklog = st.session_state.get("thinklog") or read_thinklog_from_docs()
     st.session_state["thinklog"] = thinklog
     st.caption("📝 나의 여행 고민 로그 (구글 독스 원본)")
-    st.markdown(f"""
-<div style="background-color:#ffffff; border:1px solid #d0d0d0; border-radius:10px;
-     padding:24px; height:700px; overflow-y:auto; font-size:15px; line-height:1.8;
-     color:#1a1a1a; white-space:pre-wrap; font-family:sans-serif;">{thinklog}</div>
-""", unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown(thinklog)
 
     st.divider()
 
