@@ -1,5 +1,6 @@
 import os
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 from streamlit_folium import st_folium
@@ -279,10 +280,12 @@ with tab_prep:
     with col_c2:
         if data["checklist"]:
             df_c = pd.DataFrame(data["checklist"])
+            # Google Sheets 빈 셀이 NaN(float64)으로 읽힐 수 있어 bool로 변환
+            df_c["done"] = df_c["done"].apply(lambda x: bool(x) if pd.notna(x) and str(x).strip() not in ("", "nan", "None") else False)
             for i, row in df_c.iterrows():
-                # 체크박스 상태 변경 시 즉시 시트 업데이트 (속도가 느릴 수 있음)
-                checked = st.checkbox(row["item"], value=row["done"], key=f"c_{i}")
-                if checked != row["done"]:
+                cur_val = bool(row["done"])
+                checked = st.checkbox(row["item"], value=cur_val, key=f"c_{i}")
+                if checked != cur_val:
                     df_c.at[i, "done"] = checked
                     update_sheet(df_c, "checklist")
                     st.rerun()
@@ -425,6 +428,25 @@ with tab_trip:
 
             selected_date, selected_label = TRIP_DAYS[st.session_state.selected_day]
             df_day = df_confirmed[df_confirmed["날짜"] == selected_date].reset_index(drop=True) if not df_confirmed.empty else pd.DataFrame()
+
+            # 스크롤 앵커 — caption 바로 위 (장소 클릭 시 여기부터 보이도록)
+            st.markdown('<div id="trip-map-anchor"></div>', unsafe_allow_html=True)
+
+            # 장소명 클릭 후 지도로 스크롤
+            if st.session_state.get("scroll_to_map"):
+                st.session_state.scroll_to_map = False
+                components.html("""
+                <script>
+                function doScroll() {
+                    var anchor = window.parent.document.getElementById('trip-map-anchor');
+                    if (!anchor) return;
+                    anchor.scrollIntoView({behavior: 'instant', block: 'start'});
+                }
+                setTimeout(doScroll, 120);
+                setTimeout(doScroll, 500);
+                </script>
+                """, height=1)
+
             st.caption(f"📅 {selected_label} — 확정 {len(df_day)}개")
 
             # 지도 (장소명 클릭 시 해당 핀으로 이동)
@@ -447,7 +469,7 @@ with tab_trip:
                         if count < len(offsets):
                             lat += offsets[count][0]
                             lon += offsets[count][1]
-                        pins.append((lat, lon, i+1, row.get('시간',''), row.get('내용',''), row.get('장소명','')))
+                        pins.append((lat, lon, i+1, row.get('시간',''), row.get('내용',''), row.get('장소명',''), row.get('구글지도','')))
 
                 if len(pins) >= 2:
                     folium.PolyLine(
@@ -455,11 +477,13 @@ with tab_trip:
                         color="#FF4B4B", weight=2.5, opacity=0.7, dash_array="6"
                     ).add_to(m)
 
-                for lat, lon, num, time_val, content, place in pins:
-                    popup_html = f"<b>{num}. {place or content}</b><br>{time_val}"
+                for lat, lon, num, time_val, content, place, gmap_url in pins:
+                    gmap_link = gmap_url or f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
+                    popup_html = (f"<b>{num}. {place or content}</b><br>{time_val}"
+                                  f"<br><a href='{gmap_link}' target='_blank' style='color:#4A90D9;'>🗺️ 구글맵으로 보기</a>")
                     folium.Marker(
                         location=[lat, lon],
-                        popup=folium.Popup(popup_html, max_width=200),
+                        popup=folium.Popup(popup_html, max_width=220),
                         tooltip=f"{num}. {place or content}",
                         icon=folium.DivIcon(
                             html=f'<div style="background:#FF4B4B;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.3);">{num}</div>',
@@ -473,10 +497,12 @@ with tab_trip:
                     mlat, mlon = float(r["lat"]), float(r["lon"])
                     mplace = str(r.get("장소명", "") or r.get("내용", "")).strip()
                     mmemo  = str(r.get("메모", "")).strip()
-                    popup_html = f"<b>📌 {mplace}</b>" + (f"<br>{mmemo}" if mmemo else "")
+                    mgmap  = str(r.get("구글지도", "") or f"https://www.google.com/maps/search/?api=1&query={mlat},{mlon}")
+                    popup_html = (f"<b>📌 {mplace}</b>" + (f"<br>{mmemo}" if mmemo else "")
+                                  + f"<br><a href='{mgmap}' target='_blank' style='color:#4A90D9;'>🗺️ 구글맵으로 보기</a>")
                     folium.Marker(
                         location=[mlat, mlon],
-                        popup=folium.Popup(popup_html, max_width=200),
+                        popup=folium.Popup(popup_html, max_width=220),
                         tooltip=f"📌 {mplace}",
                         icon=folium.DivIcon(
                             html=f'<div style="background:#4A90D9;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 4px rgba(0,0,0,0.3);">📌</div>',
@@ -486,56 +512,94 @@ with tab_trip:
                 except (ValueError, TypeError):
                     pass
 
-            st_folium(m, use_container_width=True, height=500)
+            map_key = f"day_map_{map_center[0]}_{map_center[1]}_{map_zoom}"
+            st_folium(m, use_container_width=True, height=500, key=map_key)
 
             # 해당 일차 일정 목록
             st.subheader(f"📋 {selected_label} 확정 일정")
 
-            # 헤더
-            hc = st.columns([0.3, 0.7, 1.6, 1.8, 1.2, 1.8])
-            for col, h in zip(hc, ["#", "시간", "장소명", "내용", "소요(이동)", "메모"]):
-                col.markdown(f"<span style='font-size:12px;font-weight:bold;opacity:0.6;'>{h}</span>", unsafe_allow_html=True)
-            st.divider()
-
             for i, row in df_day.iterrows():
-                duration_str = val(row.get('소요시간'))
+                duration_str  = val(row.get('소요시간'))
                 transport_str = val(row.get('이동시간'))
                 duration_combined = f"{duration_str}({transport_str})" if duration_str and transport_str else duration_str or ""
-                place = val(row.get('장소명'))
-                lat_v = val(row.get('lat'))
-                lon_v = val(row.get('lon'))
+                place   = val(row.get('장소명'))
+                lat_v   = val(row.get('lat'))
+                lon_v   = val(row.get('lon'))
+                time_v  = val(row.get('시간'))
+                content = val(row.get('내용'))
+                memo    = val(row.get('메모'))
 
-                rc = st.columns([0.3, 0.7, 1.6, 1.8, 1.2, 1.8])
-                rc[0].markdown(f"<b style='font-size:14px;'>{i+1}</b>", unsafe_allow_html=True)
-                rc[1].markdown(f"<span style='font-size:13px;opacity:0.75;'>{val(row.get('시간'))}</span>", unsafe_allow_html=True)
+                # 1행: 번호. 시간 - 내용 - 소요시간
+                row1_parts = [p for p in [time_v, content, duration_combined] if p]
+                row1_text = " - ".join(row1_parts) if row1_parts else ""
+                st.markdown(
+                    f"<p style='font-size:13px;opacity:0.7;margin:8px 0 2px;'>"
+                    f"<b>{i+1}.</b> {row1_text}</p>",
+                    unsafe_allow_html=True,
+                )
+
+                # 2행: 📍 장소명 — 풀너비 버튼
                 if place and lat_v and lon_v:
-                    if rc[2].button(f"📍 {place}", key=f"place_{i}", use_container_width=True):
+                    if st.button(f"📍  {place}", key=f"place_{i}", use_container_width=True):
                         st.session_state.map_center = [float(lat_v), float(lon_v)]
                         st.session_state.map_zoom = 16
+                        st.session_state.scroll_to_map = True
                         st.rerun()
-                else:
-                    rc[2].markdown(f"<span style='font-size:14px;'>{place or '—'}</span>", unsafe_allow_html=True)
-                rc[3].markdown(f"<span style='font-size:14px;font-weight:500;'>{val(row.get('내용'))}</span>", unsafe_allow_html=True)
-                rc[4].markdown(f"<span style='font-size:13px;opacity:0.8;'>{duration_combined}</span>", unsafe_allow_html=True)
-                rc[5].markdown(f"<span style='font-size:13px;opacity:0.85;'>{val(row.get('메모')).replace(chr(10), '<br>')}</span>", unsafe_allow_html=True)
+                elif place:
+                    st.markdown(
+                        f"<p style='font-size:15px;font-weight:600;margin:2px 0;'>📍 {place}</p>",
+                        unsafe_allow_html=True,
+                    )
+
+                # 3행: 메모 (있을 때만)
+                if memo:
+                    st.markdown(
+                        f"<p style='font-size:12px;opacity:0.65;margin:2px 0 6px;white-space:pre-wrap;'>{memo}</p>",
+                        unsafe_allow_html=True,
+                    )
+
+                st.divider()
 
         elif st.session_state.view_mode == "memo" and st.session_state.memo_category:
             # 카테고리 모드: 선택된 카테고리 장소 목록 + 지도
             selected_memos = [r for r in memo_places if str(r.get("내용","")).strip() == st.session_state.memo_category]
             icon = category_icon.get(st.session_state.memo_category, "📌")
+
+            # 스크롤 앵커 — caption 바로 위
+            st.markdown('<div id="trip-map-anchor"></div>', unsafe_allow_html=True)
+
+            # 클릭 후 지도로 스크롤
+            if st.session_state.get("scroll_to_map"):
+                st.session_state.scroll_to_map = False
+                components.html("""
+                <script>
+                function doScroll() {
+                    var anchor = window.parent.document.getElementById('trip-map-anchor');
+                    if (!anchor) return;
+                    anchor.scrollIntoView({behavior: 'instant', block: 'start'});
+                }
+                setTimeout(doScroll, 120);
+                setTimeout(doScroll, 500);
+                </script>
+                """, height=1)
+
             st.caption(f"{icon} {st.session_state.memo_category} — {len(selected_memos)}개")
 
             # 카테고리 지도
-            m = folium.Map(location=[16.047079, 108.206230], zoom_start=12)
+            memo_map_center = st.session_state.get("map_center", [16.047079, 108.206230])
+            memo_map_zoom   = st.session_state.get("map_zoom", 12)
+            m = folium.Map(location=memo_map_center, zoom_start=memo_map_zoom)
             for idx, r in enumerate(selected_memos, start=1):
                 try:
                     mlat, mlon = float(r["lat"]), float(r["lon"])
                     mplace = str(r.get("장소명", "") or "").strip()
                     mmemo  = str(r.get("메모", "")).strip()
-                    popup_html = f"<b>{idx}. {mplace}</b>" + (f"<br>{mmemo}" if mmemo else "")
+                    mgmap  = str(r.get("구글지도", "") or f"https://www.google.com/maps/search/?api=1&query={mlat},{mlon}")
+                    popup_html = (f"<b>{idx}. {mplace}</b>" + (f"<br>{mmemo}" if mmemo else "")
+                                  + f"<br><a href='{mgmap}' target='_blank' style='color:#4A90D9;'>🗺️ 구글맵으로 보기</a>")
                     folium.Marker(
                         location=[mlat, mlon],
-                        popup=folium.Popup(popup_html, max_width=200),
+                        popup=folium.Popup(popup_html, max_width=220),
                         tooltip=f"{idx}. {mplace}",
                         icon=folium.DivIcon(
                             html=f'<div style="background:#4A90D9;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 4px rgba(0,0,0,0.3);">📌</div>',
@@ -544,32 +608,28 @@ with tab_trip:
                     ).add_to(m)
                 except (ValueError, TypeError):
                     pass
-            st_folium(m, use_container_width=True, height=400)
+            memo_map_key = f"memo_map_{memo_map_center[0]}_{memo_map_center[1]}"
+            st_folium(m, use_container_width=True, height=400, key=memo_map_key)
 
-            # 카테고리 장소 목록 테이블
-            memo_tr = ""
-            for r in selected_memos:
+            # 장소 목록 — 버튼으로 탭 가능
+            for idx, r in enumerate(selected_memos):
                 mplace = str(r.get("장소명", "") or "").strip()
-                mmemo  = str(r.get("메모", "")).strip().replace("\n", "<br>")
-                memo_tr += (
-                    f'<tr style="border-bottom:1px solid rgba(128,128,128,0.2);">'
-                    f'<td style="padding:8px 6px;font-size:15px;">📌</td>'
-                    f'<td style="padding:8px 6px;font-weight:500;color:inherit;">{mplace}</td>'
-                    f'<td style="padding:8px 6px;font-size:13px;color:inherit;opacity:0.85;">{mmemo}</td>'
-                    f'</tr>'
-                )
-            if memo_tr:
-                st.markdown(
-                    f'<table style="width:100%;border-collapse:collapse;font-size:14px;color:inherit;">'
-                    f'<thead><tr style="background:rgba(74,144,217,0.15);font-weight:bold;text-align:left;">'
-                    f'<th style="padding:8px 6px;width:30px;"></th>'
-                    f'<th style="padding:8px 6px;">장소</th>'
-                    f'<th style="padding:8px 6px;">메모</th>'
-                    f'</tr></thead>'
-                    f'<tbody>{memo_tr}</tbody>'
-                    f'</table>',
-                    unsafe_allow_html=True
-                )
+                mmemo  = str(r.get("메모", "")).strip()
+                mlat   = str(r.get("lat", "")).strip()
+                mlon   = str(r.get("lon", "")).strip()
+
+                if mplace and mlat and mlon:
+                    if st.button(f"📌  {mplace}", key=f"memo_place_{idx}", use_container_width=True):
+                        st.session_state.map_center = [float(mlat), float(mlon)]
+                        st.session_state.map_zoom = 16
+                        st.session_state.scroll_to_map = True
+                        st.rerun()
+                elif mplace:
+                    st.markdown(f"<p style='font-size:15px;font-weight:600;margin:6px 0 2px;'>📌 {mplace}</p>", unsafe_allow_html=True)
+
+                if mmemo:
+                    st.markdown(f"<p style='font-size:12px;opacity:0.7;margin:2px 0 6px;white-space:pre-wrap;'>{mmemo}</p>", unsafe_allow_html=True)
+                st.divider()
 
         elif st.session_state.view_mode == "all":
             # 전체 동선: 모든 일차 확정 일정을 한 지도에
