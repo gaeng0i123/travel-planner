@@ -8,6 +8,29 @@ from google.oauth2.service_account import Credentials
 
 # 사이트 설정
 st.set_page_config(page_title="🇻🇳 베트남 여행 올인원 플래너", layout="wide")
+
+# --- [로그인 시스템] ---
+def check_password():
+    """로그인 상태를 확인하고 로그인 폼을 표시합니다."""
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+
+    if not st.session_state.authenticated:
+        st.title("🔒 Access Restricted")
+        password = st.text_input("Please enter the access password", type="password")
+        if st.button("Login"):
+            if password == st.secrets["PASSWORD"]:
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("❌ Incorrect password. Please try again.")
+        return False
+    return True
+
+# 로그인 확인 후 진행
+if not check_password():
+    st.stop()
+
 VND_TO_KRW = 0.054
 
 # 구글 시트 연결 설정
