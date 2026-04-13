@@ -196,8 +196,10 @@ with tab_prep:
                 "구글지도": st.column_config.LinkColumn("구글지도", width="medium"),
                 "lat": st.column_config.NumberColumn("lat", width="small"),
                 "lon": st.column_config.NumberColumn("lon", width="small"),
+                "소요시간": st.column_config.TextColumn("소요시간", width="small"),
+                "이동시간": st.column_config.TextColumn("이동시간", width="small"),
             },
-            disabled=["날짜","요일","시간","내용","메모","장소명","구글지도","lat","lon"],
+            disabled=["날짜","요일","시간","내용","메모","장소명","구글지도","lat","lon","소요시간","이동시간"],
         )
         if not edited["확정"].equals(df_i["확정"]):
             save_df = edited.copy()
@@ -293,9 +295,12 @@ with tab_trip:
             time_str = val(row.get('시간'))
             content_str = val(row.get('내용'))
             memo_str = val(row.get('메모'))
-            memo = f" — {memo_str}" if memo_str else ""
+            duration_str = val(row.get('소요시간'))
+            transport_str = val(row.get('이동시간'))
             time_badge = f"`{time_str}` " if time_str else ""
-            st.markdown(f"**{i+1}.** {time_badge}{content_str}{memo}")
+            memo_part = f" — {memo_str}" if memo_str else ""
+            duration_part = f" — {duration_str}({transport_str})" if duration_str and transport_str else f" — {duration_str}" if duration_str else ""
+            st.markdown(f"**{i+1}.** {time_badge}{content_str}{memo_part}{duration_part}")
 
 # --- [3. AI 여행 비서 단계] ---
 with tab_ai:
