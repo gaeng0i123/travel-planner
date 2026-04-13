@@ -64,15 +64,18 @@ def load_all_data():
 # 데이터 저장 로직 (구글 시트 업데이트)
 def update_sheet(df, worksheet_name):
     conn.update(spreadsheet=SHEET_URL, worksheet=worksheet_name, data=df)
-    st.cache_data.clear()
+    st.session_state.data = load_all_data()
 
-data = load_all_data()
+# 데이터는 session_state에 캐시 → 동기화 버튼 누를 때만 재로딩
+if "data" not in st.session_state:
+    st.session_state.data = load_all_data()
+data = st.session_state.data
 
 # 탭 구성
 col_title, col_btn = st.columns([5, 1])
 with col_btn:
     if st.button("🔄 동기화", use_container_width=True):
-        st.cache_data.clear()
+        st.session_state.data = load_all_data()
         st.rerun()
 
 tab_prep, tab_trip, tab_ai = st.tabs(["🏗️ 여행 준비 (Live Sheets)", "🛵 여행 현지 (동선/영수증)", "💬 AI 여행 비서"])
