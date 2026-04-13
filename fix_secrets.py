@@ -2,7 +2,7 @@ import json
 import os
 
 # 1. 기본 설정 정보
-PASSWORD = "vietnam2026"  # 원하는 비밀번호로 변경 가능
+PASSWORD = "admin1!"  # 원하는 비밀번호로 변경 가능
 THINKLOG_DOC_ID = "1CVDWorFk3vUkEiCFV6QxTC52O8_OsErYV6yHGxS2_0Q"
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/12j2JaYTvnNmSUwJJ8zSWUuqJh5MUUe5JwftYYrz_6oY/edit?usp=sharing"
 

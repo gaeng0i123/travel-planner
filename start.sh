@@ -1,38 +1,31 @@
 #!/bin/bash
 
-# 1. 프로젝트 폴더로 이동
-PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$PROJECT_DIR"
+echo "🚀 베트남 여행 플래너 시동 중..."
 
-echo "=========================================="
-echo "  🚀 베트남 여행 플래너 시작 중..."
-echo "=========================================="
-
-# 2. 가상 환경 체크 및 생성
+# 1. 가상환경(venv) 체크 및 생성
 if [ ! -d "venv" ]; then
-    echo "Creating virtual environment..."
+    echo "📦 가상환경이 없습니다. 새로 생성합니다..."
     python3 -m venv venv
+    source venv/bin/activate
+    pip install --upgrade pip
+    pip install -r requirements.txt
+else
+    echo "✅ 가상환경이 확인되었습니다. 활성화합니다."
+    source venv/bin/activate
 fi
 
-# 3. 가상 환경 활성화
-source venv/bin/activate
+# 2. .streamlit/secrets.toml 체크
+if [ ! -f ".streamlit/secrets.toml" ]; then
+    echo "🔑 설정 파일(secrets.toml)이 없습니다."
+    if [ -f "key.json" ]; then
+        echo "🛠️ key.json을 발견했습니다. 설정을 자동 생성합니다..."
+        python3 fix_secrets.py
+    else
+        echo "❌ 에러: key.json 파일이 없습니다. 구글 서비스 계정 키를 넣어주세요."
+        exit 1
+    fi
+fi
 
-# 4. 라이브러리 설치
-echo "Installing libraries. Please wait..."
-python3 -m pip install --upgrade pip
-python3 -m pip install -r requirements.txt
-
-# 5. 스트림릿 실행
-echo "Opening Web Page..."
-# 백그라운드에서 실행하고 브라우저를 엽니다.
-streamlit run app.py --server.headless true &
-
-# 6. 브라우저 열기 (3초 대기 후)
-sleep 3
-open "http://localhost:8501"
-
-echo "✅ 완료! 브라우저를 확인하세요."
-echo "=========================================="
-
-# 프로세스가 종료되지 않게 대기
-wait
+# 3. Streamlit 서버 실행
+echo "🌐 서버를 실행합니다! 브라우저 창이 열릴 때까지 잠시만 기다려 주세요..."
+streamlit run app.py

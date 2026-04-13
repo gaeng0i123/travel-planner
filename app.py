@@ -7,7 +7,68 @@ from googleapiclient.discovery import build
 from google.oauth2.service_account import Credentials
 
 # 사이트 설정
-st.set_page_config(page_title="🇻🇳 베트남 여행 올인원 플래너", layout="wide")
+st.set_page_config(
+    page_title="🇻🇳 베트남 여행 올인원 플래너", 
+    layout="centered" if st.session_state.get("mobile_mode") else "wide",
+    initial_sidebar_state="collapsed"
+)
+
+# --- [모바일 감지 및 UI 스타일 정의] ---
+st.markdown("""
+    <style>
+    /* 상단 여백 및 전체 컨테이너 최적화 */
+    .main .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 0.5rem !important;
+        padding-left: 0.8rem !important;
+        padding-right: 0.8rem !important;
+    }
+    
+    /* [모바일 전용 스타일] 너비 640px 이하 기기 */
+    @media (max-width: 640px) {
+        /* 메인 타이틀 (h1) */
+        h1 {
+            font-size: 1.2rem !important;
+            white-space: nowrap !important;
+            margin-bottom: 0.3rem !important;
+        }
+        /* 섹션 헤더 (h2) - 💰 1. 전체 예산 등 */
+        h2 {
+            font-size: 1.05rem !important;
+            margin-top: 1rem !important;
+            margin-bottom: 0.5rem !important;
+            white-space: nowrap !important;
+        }
+        /* 서브 헤더 (h3) */
+        h3 {
+            font-size: 0.95rem !important;
+            margin-top: 0.8rem !important;
+            margin-bottom: 0.4rem !important;
+        }
+        /* 일반 텍스트 및 라벨 */
+        .stMarkdown, p, span, label {
+            font-size: 0.85rem !important;
+        }
+        /* 탭 버튼 글자 크기 */
+        .stTabs [data-baseweb="tab"] {
+            font-size: 0.8rem !important;
+            padding: 6px 10px !important;
+        }
+        /* 입력창 라벨 간격 줄이기 */
+        .stTextInput label, .stSelectbox label, .stDateInput label {
+            margin-bottom: 0.1rem !important;
+        }
+    }
+
+    /* 공통 버튼 스타일 */
+    .stButton>button {
+        width: 100%;
+        border-radius: 10px;
+        height: 3em;
+        font-weight: bold;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # --- [로그인 시스템] ---
 def check_password():
@@ -37,7 +98,7 @@ VND_TO_KRW = 0.054
 # .streamlit/secrets.toml 파일에 아래 주소를 저장하거나 직접 입력 가능
 SHEET_URL = "https://docs.google.com/spreadsheets/d/12j2JaYTvnNmSUwJJ8zSWUuqJh5MUUe5JwftYYrz_6oY/edit?usp=sharing"
 
-st.title("🇻🇳 베트남 여행 스마트 매니저 (Live DB)")
+st.title("✈️ 2026 베트남 다낭 여행")
 
 # 데이터 로드 로직 (구글 시트 연동)
 conn = st.connection("gsheets", type=GSheetsConnection)
