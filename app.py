@@ -8,64 +8,85 @@ from google.oauth2.service_account import Credentials
 
 # 사이트 설정
 st.set_page_config(
-    page_title="🇻🇳 베트남 여행 올인원 플래너", 
-    layout="centered" if st.session_state.get("mobile_mode") else "wide",
+    page_title="🇻🇳 2026 베트남 다낭 여행 ✈️", 
+    layout="wide",
     initial_sidebar_state="collapsed"
 )
 
 # --- [모바일 감지 및 UI 스타일 정의] ---
 st.markdown("""
     <style>
-    /* 상단 여백 및 전체 컨테이너 최적화 */
+    /* 1. Streamlit 기본 헤더(포크/깃 아이콘 등) 숨기기 */
+    header[data-testid="stHeader"] {
+        display: none !important;
+    }
+    
+    /* 2. 전체 컨테이너 상단 여백 제로화 및 위로 끌어올리기 */
     .main .block-container {
-        padding-top: 1rem !important;
+        padding-top: 0rem !important;
         padding-bottom: 0.5rem !important;
         padding-left: 0.8rem !important;
         padding-right: 0.8rem !important;
     }
     
-    /* [모바일 전용 스타일] 너비 640px 이하 기기 */
+    /* [모바일 전용 초밀착 설정] */
     @media (max-width: 640px) {
-        /* 메인 타이틀 (h1) */
+        .stApp {
+            margin-top: -3.8rem !important; /* 위로 더 바싹 당김 */
+        }
+        .main .block-container {
+            padding-top: 0rem !important;
+            margin-top: 0rem !important;
+        }
+        /* 제목(h1) - 🇻🇳 베트남 다낭 여행 ✈️ 및 로그인 제목 */
         h1 {
-            font-size: 1.2rem !important;
-            white-space: nowrap !important;
-            margin-bottom: 0.3rem !important;
+            font-size: 25px !important; /* 시원하게 키움 */
+            margin: 0 !important;
+            padding: 0.6rem 0 0.3rem 0 !important;
+            line-height: 1.1 !important;
+            font-weight: 800 !important;
+        }
+        /* 동기화 버튼 텍스트 크기 (기존처럼 확보) */
+        .stButton>button {
+            font-size: 14.5px !important; 
+            height: 2.3em !important;
         }
         /* 섹션 헤더 (h2) - 💰 1. 전체 예산 등 */
         h2 {
-            font-size: 1.05rem !important;
-            margin-top: 1rem !important;
-            margin-bottom: 0.5rem !important;
-            white-space: nowrap !important;
+            font-size: 19px !important; /* 중간 제목 강조 */
+            margin-top: 1.2rem !important;
+            margin-bottom: 0.6rem !important;
+            font-weight: bold !important;
         }
         /* 서브 헤더 (h3) */
         h3 {
-            font-size: 0.95rem !important;
+            font-size: 17px !important;
             margin-top: 0.8rem !important;
             margin-bottom: 0.4rem !important;
         }
         /* 일반 텍스트 및 라벨 */
         .stMarkdown, p, span, label {
-            font-size: 0.85rem !important;
+            font-size: 14.5px !important;
         }
         /* 탭 버튼 글자 크기 */
         .stTabs [data-baseweb="tab"] {
-            font-size: 0.8rem !important;
-            padding: 6px 10px !important;
+            font-size: 0.85rem !important;
+            padding: 5px 8px !important;
         }
-        /* 입력창 라벨 간격 줄이기 */
+        /* 입력창 라벨 간격 */
         .stTextInput label, .stSelectbox label, .stDateInput label {
-            margin-bottom: 0.1rem !important;
+            margin-bottom: 0rem !important;
         }
-    }
-
-    /* 공통 버튼 스타일 */
-    .stButton>button {
-        width: 100%;
-        border-radius: 10px;
-        height: 3em;
-        font-weight: bold;
+        /* [신규] 정보 박스(st.info) 높이 축소 */
+        div[data-testid="stAlert"] {
+            padding: 0.3rem 0.6rem !important;
+            margin-top: 0rem !important;
+            margin-bottom: 0.5rem !important;
+        }
+        div[data-testid="stAlert"] div[data-testid="stMarkdownContainer"] p {
+            font-size: 0.85rem !important;
+            margin: 0 !important;
+        }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -97,8 +118,6 @@ VND_TO_KRW = 0.054
 # 구글 시트 연결 설정
 # .streamlit/secrets.toml 파일에 아래 주소를 저장하거나 직접 입력 가능
 SHEET_URL = "https://docs.google.com/spreadsheets/d/12j2JaYTvnNmSUwJJ8zSWUuqJh5MUUe5JwftYYrz_6oY/edit?usp=sharing"
-
-st.title("✈️ 2026 베트남 다낭 여행")
 
 # 데이터 로드 로직 (구글 시트 연동)
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -152,13 +171,18 @@ def update_sheet(df, worksheet_name):
     conn.update(spreadsheet=SHEET_URL, worksheet=worksheet_name, data=df)
     st.session_state.data = load_all_data()
 
-# 데이터는 session_state에 캐시 → 동기화 버튼 누를 때만 재로딩
-if "data" not in st.session_state:
+# 데이터 로드 및 세션 상태 초기화
+if "data" not in st.session_state or st.session_state.data is None:
     st.session_state.data = load_all_data()
+
+# 최종 데이터 변수 할당 (이 아래부터 data 변수 사용 가능)
 data = st.session_state.data
 
 # 탭 구성
-col_title, col_btn = st.columns([5, 1])
+col_title, col_btn = st.columns([3.5, 1.2])
+# 제목이 길어져 비율 소폭 조정
+with col_title:
+    st.title("🇻🇳 베트남 다낭 여행 ✈️")
 with col_btn:
     if st.button("🔄 동기화", use_container_width=True):
         st.session_state.data = load_all_data()
