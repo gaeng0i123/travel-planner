@@ -176,7 +176,8 @@ with tab_prep:
     st.header("🗓️ 3. 예상 일정")
     if data["itinerary"]:
         df_i = pd.DataFrame(data["itinerary"])
-        st.dataframe(
+        df_i["확정"] = df_i["확정"].apply(lambda x: str(x).upper() in ("TRUE", "1", "YES", "확정"))
+        edited = st.data_editor(
             df_i,
             use_container_width=True,
             hide_index=True,
@@ -185,14 +186,20 @@ with tab_prep:
                 "날짜": st.column_config.TextColumn("날짜", width="small"),
                 "요일": st.column_config.TextColumn("요일", width="small"),
                 "시간": st.column_config.TextColumn("시간", width="small"),
-                "확정": st.column_config.CheckboxColumn("확정", width="small"),
+                "확정": st.column_config.CheckboxColumn("✅ 확정", width="small"),
                 "내용": st.column_config.TextColumn("내용", width="large"),
                 "메모": st.column_config.TextColumn("메모", width="medium"),
+                "장소명": st.column_config.TextColumn("장소명", width="medium"),
                 "구글지도": st.column_config.LinkColumn("구글지도", width="medium"),
                 "lat": st.column_config.NumberColumn("lat", width="small"),
                 "lon": st.column_config.NumberColumn("lon", width="small"),
-            }
+            },
+            disabled=["날짜","요일","시간","내용","메모","장소명","구글지도","lat","lon"],
         )
+        if not edited["확정"].equals(df_i["확정"]):
+            update_sheet(edited, "상세일정")
+            st.success("확정 상태가 저장되었습니다!")
+            st.rerun()
     else:
         st.write("구글 시트 '상세일정' 탭에 데이터를 입력해 주세요.")
 
