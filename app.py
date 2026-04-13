@@ -36,13 +36,15 @@ def read_thinklog_from_docs():
         )
         service = build("docs", "v1", credentials=creds)
         doc = service.documents().get(documentId=st.secrets["THINKLOG_DOC_ID"]).execute()
-        text = ""
+        paragraphs = []
         for element in doc.get("body", {}).get("content", []):
             if "paragraph" in element:
+                line = ""
                 for pe in element["paragraph"]["elements"]:
                     if "textRun" in pe:
-                        text += pe["textRun"]["content"]
-        return text.strip()
+                        line += pe["textRun"]["content"]
+                paragraphs.append(line.rstrip("\n"))
+        return "\n".join(paragraphs).strip()
     except Exception as e:
         return f"구글 독스 읽기 실패: {e}"
 
@@ -305,18 +307,31 @@ with tab_trip:
                 "메모": val(row.get('메모')),
             })
 
-        df_display = pd.DataFrame(rows)
-        st.dataframe(
-            df_display,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "#": st.column_config.NumberColumn("#", width=40),
-                "시간": st.column_config.TextColumn("시간", width="small"),
-                "내용": st.column_config.TextColumn("내용", width="medium"),
-                "소요(이동)": st.column_config.TextColumn("소요(이동)", width="small"),
-                "메모": st.column_config.TextColumn("메모", width="large"),
-            }
+        tr_html = ""
+        for r in rows:
+            memo_html = str(r["메모"]).replace("\n", "<br>")
+            tr_html += (
+                f'<tr style="border-bottom:1px solid #eee;">'
+                f'<td style="padding:8px 6px;width:30px;text-align:center;font-weight:bold;color:#555;">{r["#"]}</td>'
+                f'<td style="padding:8px 6px;width:70px;white-space:nowrap;color:#888;">{r["시간"]}</td>'
+                f'<td style="padding:8px 6px;width:180px;font-weight:500;">{r["내용"]}</td>'
+                f'<td style="padding:8px 6px;width:110px;color:#666;font-size:13px;">{r["소요(이동)"]}</td>'
+                f'<td style="padding:8px 6px;font-size:13px;color:#444;">{memo_html}</td>'
+                f'</tr>'
+            )
+
+        st.markdown(
+            f'<table style="width:100%;border-collapse:collapse;font-size:14px;">'
+            f'<thead><tr style="background:#f0f2f6;font-weight:bold;text-align:left;">'
+            f'<th style="padding:8px 6px;width:30px;">#</th>'
+            f'<th style="padding:8px 6px;width:70px;">시간</th>'
+            f'<th style="padding:8px 6px;width:180px;">내용</th>'
+            f'<th style="padding:8px 6px;width:110px;">소요(이동)</th>'
+            f'<th style="padding:8px 6px;">메모</th>'
+            f'</tr></thead>'
+            f'<tbody>{tr_html}</tbody>'
+            f'</table>',
+            unsafe_allow_html=True
         )
 
 # --- [3. AI 여행 비서 단계] ---
