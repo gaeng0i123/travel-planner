@@ -28,7 +28,7 @@
 
 ## 4. 현재 상태 및 다음 과제
 - GitHub 레포 생성 및 `main`/`dev` 브랜치 푸시 완료.
-- **다음:** Streamlit Community Cloud 배포 (`share.streamlit.io`).
+- [x] **Streamlit Community Cloud 배포 완료:** https://travel-planner-0i.streamlit.app/
 - **이후 과제:** 현지 탭 구현 (VND 경비 입력, 동선 지도).
 
 ---

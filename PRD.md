@@ -32,7 +32,7 @@
 ## 5. 배포 구조
 - **레포:** `github.com/gaeng0i123/travel-planner`
 - **브랜치:** `dev` (개발) → `main` (배포)
-- **호스팅:** Streamlit Community Cloud (`share.streamlit.io`)
+- **호스팅:** Streamlit Community Cloud → https://travel-planner-0i.streamlit.app/
 
 ## 6. 이후 과제 (작업 예정)
 - 현지 탭: VND 실시간 경비 입력 및 KRW 자동 환산
