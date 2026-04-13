@@ -437,36 +437,17 @@ with tab_trip:
                 st.session_state.scroll_to_map = False
                 components.html("""
                 <script>
-                (function() {
+                function applyScroll() {
                     var doc = window.parent.document;
+                    var anchor = doc.getElementById('trip-map-anchor');
+                    if (!anchor) return;
                     var main = doc.querySelector('[data-testid="stMain"]');
-                    var lastOurScroll = 0, debounce;
-
-                    function applyScroll() {
-                        var anchor = doc.getElementById('trip-map-anchor');
-                        if (!anchor) return;
-                        var cTop = main ? main.getBoundingClientRect().top : 0;
-                        lastOurScroll = Date.now();
-                        // PC: scrollIntoView
-                        anchor.scrollIntoView({behavior: 'instant', block: 'start'});
-                        // 모바일: scrollIntoView 후에도 위치 어긋나면 stMain.scrollTop 보정
-                        var aTop = anchor.getBoundingClientRect().top;
-                        if (Math.abs(aTop - cTop) > 5 && main) main.scrollTop += (aTop - cTop);
-                    }
-
-                    // Streamlit이 스크롤을 복원할 때마다 재보정
-                    function onScroll() {
-                        if (Date.now() - lastOurScroll < 400) return; // 내가 건 스크롤 무시
-                        clearTimeout(debounce);
-                        debounce = setTimeout(applyScroll, 80);
-                    }
-                    var target = main || window.parent;
-                    target.addEventListener('scroll', onScroll);
-                    setTimeout(function(){ target.removeEventListener('scroll', onScroll); }, 5000);
-
-                    // Streamlit 스크롤 복원 없으면 900ms 안전망
-                    setTimeout(applyScroll, 900);
-                })();
+                    var cTop = main ? main.getBoundingClientRect().top : 0;
+                    anchor.scrollIntoView({behavior: 'instant', block: 'start'});
+                    var aTop = anchor.getBoundingClientRect().top;
+                    if (Math.abs(aTop - cTop) > 5 && main) main.scrollTop += (aTop - cTop);
+                }
+                setTimeout(applyScroll, 900);
                 </script>
                 """, height=1)
 
@@ -596,36 +577,17 @@ with tab_trip:
                 st.session_state.scroll_to_map = False
                 components.html("""
                 <script>
-                (function() {
+                function applyScroll() {
                     var doc = window.parent.document;
+                    var anchor = doc.getElementById('trip-map-anchor');
+                    if (!anchor) return;
                     var main = doc.querySelector('[data-testid="stMain"]');
-                    var lastOurScroll = 0, debounce;
-
-                    function applyScroll() {
-                        var anchor = doc.getElementById('trip-map-anchor');
-                        if (!anchor) return;
-                        var cTop = main ? main.getBoundingClientRect().top : 0;
-                        lastOurScroll = Date.now();
-                        // PC: scrollIntoView
-                        anchor.scrollIntoView({behavior: 'instant', block: 'start'});
-                        // 모바일: scrollIntoView 후에도 위치 어긋나면 stMain.scrollTop 보정
-                        var aTop = anchor.getBoundingClientRect().top;
-                        if (Math.abs(aTop - cTop) > 5 && main) main.scrollTop += (aTop - cTop);
-                    }
-
-                    // Streamlit이 스크롤을 복원할 때마다 재보정
-                    function onScroll() {
-                        if (Date.now() - lastOurScroll < 400) return; // 내가 건 스크롤 무시
-                        clearTimeout(debounce);
-                        debounce = setTimeout(applyScroll, 80);
-                    }
-                    var target = main || window.parent;
-                    target.addEventListener('scroll', onScroll);
-                    setTimeout(function(){ target.removeEventListener('scroll', onScroll); }, 5000);
-
-                    // Streamlit 스크롤 복원 없으면 900ms 안전망
-                    setTimeout(applyScroll, 900);
-                })();
+                    var cTop = main ? main.getBoundingClientRect().top : 0;
+                    anchor.scrollIntoView({behavior: 'instant', block: 'start'});
+                    var aTop = anchor.getBoundingClientRect().top;
+                    if (Math.abs(aTop - cTop) > 5 && main) main.scrollTop += (aTop - cTop);
+                }
+                setTimeout(applyScroll, 900);
                 </script>
                 """, height=1)
 
