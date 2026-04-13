@@ -65,7 +65,7 @@ st.markdown("""
             margin-bottom: 0.4rem !important;
         }
         /* 일반 텍스트 및 라벨 */
-        .stMarkdown, p, span, label {
+        .stMarkdown p, label {
             font-size: 14.5px !important;
         }
         /* 탭 버튼 글자 크기 */
@@ -457,11 +457,11 @@ with tab_ai:
         st.markdown("""
 <style>
 .thinklog{color:inherit;}
-.thinklog h1{font-size:1.2rem;margin:8px 0 4px;color:inherit;}
-.thinklog h2{font-size:1.05rem;margin:6px 0 3px;color:inherit;}
-.thinklog h3{font-size:0.95rem;margin:4px 0 2px;color:inherit;}
-.thinklog p{font-size:0.9rem;margin:2px 0;line-height:1.6;color:inherit;}
-.thinklog li{font-size:0.9rem;line-height:1.6;color:inherit;}
+.thinklog h1{font-size:1.2rem !important;margin:8px 0 4px;color:inherit;}
+.thinklog h2{font-size:1.05rem !important;margin:6px 0 3px;color:inherit;}
+.thinklog h3{font-size:0.95rem !important;margin:4px 0 2px;color:inherit;}
+.thinklog p{font-size:0.9rem !important;margin:2px 0;line-height:1.6;color:inherit;}
+.thinklog li{font-size:0.9rem !important;line-height:1.6;color:inherit;}
 </style>
 """, unsafe_allow_html=True)
         st.markdown(f'<div class="thinklog">{thinklog}</div>', unsafe_allow_html=True)
