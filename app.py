@@ -346,7 +346,16 @@ with tab_ai:
     st.session_state["thinklog"] = thinklog
     st.caption("📝 나의 여행 고민 로그 (구글 독스 원본)")
     with st.container(border=True):
-        st.markdown(thinklog)
+        st.markdown("""
+<style>
+.thinklog h1{font-size:1.2rem;margin:8px 0 4px;}
+.thinklog h2{font-size:1.05rem;margin:6px 0 3px;}
+.thinklog h3{font-size:0.95rem;margin:4px 0 2px;}
+.thinklog p{font-size:0.9rem;margin:2px 0;line-height:1.6;}
+.thinklog li{font-size:0.9rem;line-height:1.6;}
+</style>
+""", unsafe_allow_html=True)
+        st.markdown(f'<div class="thinklog">{thinklog}</div>', unsafe_allow_html=True)
 
     st.divider()
 
