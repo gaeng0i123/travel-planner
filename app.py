@@ -438,12 +438,23 @@ with tab_trip:
                 components.html("""
                 <script>
                 function doScroll() {
-                    var anchor = window.parent.document.getElementById('trip-map-anchor');
+                    var doc = window.parent.document;
+                    var anchor = doc.getElementById('trip-map-anchor');
                     if (!anchor) return;
-                    anchor.scrollIntoView({behavior: 'instant', block: 'start'});
+                    var anchorTop = anchor.getBoundingClientRect().top;
+                    // PC: stMain 스크롤 컨테이너 직접 조작
+                    var main = doc.querySelector('[data-testid="stMain"]');
+                    var scrolled = false;
+                    if (main) {
+                        var before = main.scrollTop;
+                        main.scrollTop += anchorTop - main.getBoundingClientRect().top;
+                        if (main.scrollTop !== before) scrolled = true;
+                    }
+                    // 모바일(iOS 등): stMain이 안 먹히면 window 직접 스크롤
+                    if (!scrolled) window.parent.scrollBy(0, anchorTop);
                 }
-                setTimeout(doScroll, 120);
-                setTimeout(doScroll, 500);
+                setTimeout(doScroll, 300);
+                setTimeout(doScroll, 800);
                 </script>
                 """, height=1)
 
@@ -574,12 +585,23 @@ with tab_trip:
                 components.html("""
                 <script>
                 function doScroll() {
-                    var anchor = window.parent.document.getElementById('trip-map-anchor');
+                    var doc = window.parent.document;
+                    var anchor = doc.getElementById('trip-map-anchor');
                     if (!anchor) return;
-                    anchor.scrollIntoView({behavior: 'instant', block: 'start'});
+                    var anchorTop = anchor.getBoundingClientRect().top;
+                    // PC: stMain 스크롤 컨테이너 직접 조작
+                    var main = doc.querySelector('[data-testid="stMain"]');
+                    var scrolled = false;
+                    if (main) {
+                        var before = main.scrollTop;
+                        main.scrollTop += anchorTop - main.getBoundingClientRect().top;
+                        if (main.scrollTop !== before) scrolled = true;
+                    }
+                    // 모바일(iOS 등): stMain이 안 먹히면 window 직접 스크롤
+                    if (!scrolled) window.parent.scrollBy(0, anchorTop);
                 }
-                setTimeout(doScroll, 120);
-                setTimeout(doScroll, 500);
+                setTimeout(doScroll, 300);
+                setTimeout(doScroll, 800);
                 </script>
                 """, height=1)
 
