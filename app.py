@@ -441,20 +441,19 @@ with tab_trip:
                     var doc = window.parent.document;
                     var anchor = doc.getElementById('trip-map-anchor');
                     if (!anchor) return;
-                    var anchorTop = anchor.getBoundingClientRect().top;
-                    // PC: stMain 스크롤 컨테이너 직접 조작
+                    // PC: scrollIntoView 동작
+                    anchor.scrollIntoView({behavior: 'instant', block: 'start'});
+                    // 모바일(iOS): scrollIntoView가 iframe에서 안 먹히면 window.scrollBy로 폴백
                     var main = doc.querySelector('[data-testid="stMain"]');
-                    var scrolled = false;
-                    if (main) {
-                        var before = main.scrollTop;
-                        main.scrollTop += anchorTop - main.getBoundingClientRect().top;
-                        if (main.scrollTop !== before) scrolled = true;
+                    var containerTop = main ? main.getBoundingClientRect().top : 0;
+                    var anchorTop = anchor.getBoundingClientRect().top;
+                    if (Math.abs(anchorTop - containerTop) > 5) {
+                        window.parent.scrollBy(0, anchorTop - containerTop);
                     }
-                    // 모바일(iOS 등): stMain이 안 먹히면 window 직접 스크롤
-                    if (!scrolled) window.parent.scrollBy(0, anchorTop);
                 }
-                setTimeout(doScroll, 300);
-                setTimeout(doScroll, 800);
+                setTimeout(doScroll, 120);
+                setTimeout(doScroll, 500);
+                setTimeout(doScroll, 950);
                 </script>
                 """, height=1)
 
@@ -588,20 +587,19 @@ with tab_trip:
                     var doc = window.parent.document;
                     var anchor = doc.getElementById('trip-map-anchor');
                     if (!anchor) return;
-                    var anchorTop = anchor.getBoundingClientRect().top;
-                    // PC: stMain 스크롤 컨테이너 직접 조작
+                    // PC: scrollIntoView 동작
+                    anchor.scrollIntoView({behavior: 'instant', block: 'start'});
+                    // 모바일(iOS): scrollIntoView가 iframe에서 안 먹히면 window.scrollBy로 폴백
                     var main = doc.querySelector('[data-testid="stMain"]');
-                    var scrolled = false;
-                    if (main) {
-                        var before = main.scrollTop;
-                        main.scrollTop += anchorTop - main.getBoundingClientRect().top;
-                        if (main.scrollTop !== before) scrolled = true;
+                    var containerTop = main ? main.getBoundingClientRect().top : 0;
+                    var anchorTop = anchor.getBoundingClientRect().top;
+                    if (Math.abs(anchorTop - containerTop) > 5) {
+                        window.parent.scrollBy(0, anchorTop - containerTop);
                     }
-                    // 모바일(iOS 등): stMain이 안 먹히면 window 직접 스크롤
-                    if (!scrolled) window.parent.scrollBy(0, anchorTop);
                 }
-                setTimeout(doScroll, 300);
-                setTimeout(doScroll, 800);
+                setTimeout(doScroll, 120);
+                setTimeout(doScroll, 500);
+                setTimeout(doScroll, 950);
                 </script>
                 """, height=1)
 
