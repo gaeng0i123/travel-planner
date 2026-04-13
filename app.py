@@ -311,18 +311,18 @@ with tab_trip:
         for r in rows:
             memo_html = str(r["메모"]).replace("\n", "<br>")
             tr_html += (
-                f'<tr style="border-bottom:1px solid #eee;">'
-                f'<td style="padding:8px 6px;width:30px;text-align:center;font-weight:bold;color:#555;">{r["#"]}</td>'
-                f'<td style="padding:8px 6px;width:70px;white-space:nowrap;color:#888;">{r["시간"]}</td>'
-                f'<td style="padding:8px 6px;width:180px;font-weight:500;">{r["내용"]}</td>'
-                f'<td style="padding:8px 6px;width:110px;color:#666;font-size:13px;">{r["소요(이동)"]}</td>'
-                f'<td style="padding:8px 6px;font-size:13px;color:#444;">{memo_html}</td>'
+                f'<tr style="border-bottom:1px solid rgba(128,128,128,0.2);">'
+                f'<td style="padding:8px 6px;width:30px;text-align:center;font-weight:bold;color:inherit;">{r["#"]}</td>'
+                f'<td style="padding:8px 6px;width:70px;white-space:nowrap;color:inherit;opacity:0.75;">{r["시간"]}</td>'
+                f'<td style="padding:8px 6px;width:180px;font-weight:500;color:inherit;">{r["내용"]}</td>'
+                f'<td style="padding:8px 6px;width:110px;color:inherit;opacity:0.8;font-size:13px;">{r["소요(이동)"]}</td>'
+                f'<td style="padding:8px 6px;font-size:13px;color:inherit;opacity:0.85;">{memo_html}</td>'
                 f'</tr>'
             )
 
         st.markdown(
-            f'<table style="width:100%;border-collapse:collapse;font-size:14px;">'
-            f'<thead><tr style="background:#f0f2f6;font-weight:bold;text-align:left;">'
+            f'<table style="width:100%;border-collapse:collapse;font-size:14px;color:inherit;">'
+            f'<thead><tr style="background:rgba(128,128,128,0.1);font-weight:bold;text-align:left;">'
             f'<th style="padding:8px 6px;width:30px;">#</th>'
             f'<th style="padding:8px 6px;width:70px;">시간</th>'
             f'<th style="padding:8px 6px;width:180px;">내용</th>'
@@ -348,11 +348,12 @@ with tab_ai:
     with st.container(border=True):
         st.markdown("""
 <style>
-.thinklog h1{font-size:1.2rem;margin:8px 0 4px;}
-.thinklog h2{font-size:1.05rem;margin:6px 0 3px;}
-.thinklog h3{font-size:0.95rem;margin:4px 0 2px;}
-.thinklog p{font-size:0.9rem;margin:2px 0;line-height:1.6;}
-.thinklog li{font-size:0.9rem;line-height:1.6;}
+.thinklog{color:inherit;}
+.thinklog h1{font-size:1.2rem;margin:8px 0 4px;color:inherit;}
+.thinklog h2{font-size:1.05rem;margin:6px 0 3px;color:inherit;}
+.thinklog h3{font-size:0.95rem;margin:4px 0 2px;color:inherit;}
+.thinklog p{font-size:0.9rem;margin:2px 0;line-height:1.6;color:inherit;}
+.thinklog li{font-size:0.9rem;line-height:1.6;color:inherit;}
 </style>
 """, unsafe_allow_html=True)
         st.markdown(f'<div class="thinklog">{thinklog}</div>', unsafe_allow_html=True)
