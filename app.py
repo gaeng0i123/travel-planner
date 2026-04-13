@@ -197,10 +197,58 @@ with tab_prep:
 # --- [2. 여행 현지 단계] ---
 with tab_trip:
     st.header("🛵 현지 실시간 관리")
-    st.write("구글 시트와 연동된 지도를 곧 업데이트하겠습니다.")
-    if st.button("🔄 데이터 강제 새로고침"):
-        st.cache_data.clear()
-        st.rerun()
+
+    # 확정된 일정만 필터링
+    confirmed = [r for r in data["itinerary"] if str(r.get("확정", "")).upper() in ("TRUE", "1", "YES", "확정")]
+    df_confirmed = pd.DataFrame(confirmed) if confirmed else pd.DataFrame()
+
+    if df_confirmed.empty:
+        st.info("여행 준비 탭 예상일정에서 일정을 확정하면 여기에 표시됩니다.")
+    else:
+        # 날짜 기준 1일차, 2일차... 버튼
+        dates = sorted(df_confirmed["날짜"].dropna().unique())
+        day_labels = [f"{i+1}일차" for i in range(len(dates))]
+
+        if "selected_day" not in st.session_state:
+            st.session_state.selected_day = 0
+
+        cols = st.columns(len(dates))
+        for i, (col, label) in enumerate(zip(cols, day_labels)):
+            with col:
+                btn_type = "primary" if st.session_state.selected_day == i else "secondary"
+                if st.button(label, use_container_width=True, type=btn_type, key=f"day_{i}"):
+                    st.session_state.selected_day = i
+                    st.rerun()
+
+        # 선택된 날짜 일정
+        selected_date = dates[st.session_state.selected_day]
+        df_day = df_confirmed[df_confirmed["날짜"] == selected_date].reset_index(drop=True)
+        st.caption(f"📅 {selected_date} ({day_labels[st.session_state.selected_day]}) — 확정 {len(df_day)}개")
+
+        # 지도 (다낭 중심)
+        m = folium.Map(location=[16.047079, 108.206230], zoom_start=13)
+
+        if "lat" in df_day.columns and "lon" in df_day.columns:
+            for i, row in df_day.iterrows():
+                if pd.notna(row.get("lat")) and pd.notna(row.get("lon")):
+                    folium.Marker(
+                        location=[float(row["lat"]), float(row["lon"])],
+                        popup=f"{row['시간']} {row['내용']}",
+                        tooltip=f"{i+1}. {row['내용']}",
+                        icon=folium.DivIcon(
+                            html=f'<div style="background:#FF4B4B;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.3);">{i+1}</div>'
+                        )
+                    ).add_to(m)
+        else:
+            st.info("📍 구글 지도 링크에서 좌표를 추출하면 핀이 표시됩니다.")
+
+        st_folium(m, use_container_width=True, height=500)
+
+        # 해당 일차 일정 목록
+        st.subheader(f"📋 {day_labels[st.session_state.selected_day]} 확정 일정")
+        for i, row in df_day.iterrows():
+            memo = f" — {row['메모']}" if row.get('메모') else ""
+            st.markdown(f"**{i+1}.** `{row.get('시간','')}` {row.get('내용','')}{memo}")
 
 # --- [3. AI 여행 비서 단계] ---
 with tab_ai:
