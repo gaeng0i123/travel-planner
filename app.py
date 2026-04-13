@@ -460,6 +460,9 @@ with tab_trip:
                     var target = main || window.parent;
                     target.addEventListener('scroll', onScroll);
                     setTimeout(function(){ target.removeEventListener('scroll', onScroll); }, 5000);
+
+                    // 스크롤 이벤트 없을 때 안전망
+                    setTimeout(applyScroll, 900);
                 })();
                 </script>
                 """, height=1)
@@ -613,6 +616,9 @@ with tab_trip:
                     var target = main || window.parent;
                     target.addEventListener('scroll', onScroll);
                     setTimeout(function(){ target.removeEventListener('scroll', onScroll); }, 5000);
+
+                    // 스크롤 이벤트 없을 때 안전망
+                    setTimeout(applyScroll, 900);
                 })();
                 </script>
                 """, height=1)
