@@ -464,9 +464,7 @@ with tab_trip:
                     target.addEventListener('scroll', onScroll);
                     setTimeout(function(){ target.removeEventListener('scroll', onScroll); }, 5000);
 
-                    // 즉시 + 안전망
-                    applyScroll();
-                    setTimeout(applyScroll, 400);
+                    // Streamlit 스크롤 복원 없으면 900ms 안전망
                     setTimeout(applyScroll, 900);
                 })();
                 </script>
@@ -625,9 +623,7 @@ with tab_trip:
                     target.addEventListener('scroll', onScroll);
                     setTimeout(function(){ target.removeEventListener('scroll', onScroll); }, 5000);
 
-                    // 즉시 + 안전망
-                    applyScroll();
-                    setTimeout(applyScroll, 400);
+                    // Streamlit 스크롤 복원 없으면 900ms 안전망
                     setTimeout(applyScroll, 900);
                 })();
                 </script>
