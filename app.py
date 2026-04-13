@@ -469,7 +469,7 @@ with tab_ai:
     st.divider()
 
     st.markdown("### 🤖 AI에게 물어보기")
-    st.info("위 내용을 복사해서 AI에게 붙여넣으면 맥락을 바로 이해합니다.")
+    st.info("Claude Code와 여행 고민을 대화한 뒤 **'정리해줘'** 라고 하면 대화 내용이 위 독스에 자동으로 기록됩니다.")
     col_a1, col_a2 = st.columns(2)
     with col_a1:
         st.link_button("Gemini 열기", "https://gemini.google.com", use_container_width=True)
