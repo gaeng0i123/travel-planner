@@ -33,7 +33,22 @@
 ## 4. 구글 독스
 - **thinklog 문서:** 여행 고민 및 일정 로그. 앱이 서비스 계정으로 읽기 전용 접근.
 
-## 5. 배포
+## 5. 로컬 디렉토리 구조
+```
+~/myproject/
+└── travel-planner/       ← 실제 프로젝트 (깃 루트)
+    ├── app.py
+    ├── start.sh           ← 실행 시 travel-planner/venv/ 자동 생성
+    ├── fix_secrets.py     ← key.json → secrets.toml 변환 도구
+    ├── requirements.txt
+    ├── .streamlit/
+    │   └── secrets.toml  ← 비공개 (깃 제외)
+    ├── HISTORY.md
+    └── PRD.md
+```
+- `~/myproject/venv/` (구버전 가상환경) 삭제 완료. `start.sh`가 프로젝트 내부에 자체 venv 생성.
+
+## 6. 배포
 - **레포:** `github.com/gaeng0i123/travel-planner` (Public)
 - **브랜치:** `dev` 개발 → `main` 배포
 - **URL:** https://travel-planner-0i.streamlit.app/
