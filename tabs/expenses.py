@@ -240,8 +240,7 @@ def _render_ocr_form(data: dict) -> None:
                 st.session_state.receipt_image = None
                 st.session_state.ocr_upload_key += 1  # 파일 업로더 리셋
                 st.session_state.ocr_memo_gen += 1    # 메모 key 세대 올려서 초기화
-                with st.spinner("시트에 저장 중..."):
-                    update_sheet(df_final, "expenses")
+                update_sheet(df_final, "expenses")
                 st.toast(f"✅ {len(new_rows)}개 품목 저장 완료!")
                 st.rerun()
 
@@ -449,12 +448,10 @@ def _render_expense_list(data: dict) -> None:
                     st.rerun()
 
 def _save_and_rerun(new_row: dict, data: dict) -> None:
-    """공통 저장 로직"""
+    """공통 저장 로직 — 즉시 로컬 반영 후 대기열 적재"""
     df_exp = pd.DataFrame(data.get("expenses", []))
     df_new = pd.DataFrame([new_row])
     df_final = pd.concat([df_exp, df_new], ignore_index=True)
-    
-    with st.spinner("시트에 저장 중..."):
-        update_sheet(df_final, "expenses")
-        st.success("저장되었습니다!")
-        st.rerun()
+    update_sheet(df_final, "expenses")
+    st.toast("✅ 저장 완료!")
+    st.rerun()
