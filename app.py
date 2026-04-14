@@ -120,17 +120,22 @@ if q_params.get("tab") == "expenses":
     place = q_params.get("place", "")
     if place:
         st.info(f"📍 **{place}** 경비 입력")
-    # 새 탭을 닫아서 원래 지도 화면으로 복귀
-    st.markdown(
-        '<a href="/" style="display:inline-block;padding:8px 18px;'
-        'background:#4A90D9;color:white;border-radius:8px;'
-        'text-decoration:none;font-size:15px;font-weight:600;">'
-        '← 지도로 돌아가기</a>',
-        unsafe_allow_html=True,
-    )
+    if st.button("← 지도로 돌아가기", use_container_width=False):
+        components.html("<script>window.parent.close();</script>", height=0)
     expenses.render(data)
 else:
     # 일반 탭 내비게이션
+    # 💰 경비 관리 탭으로 JS 강제 이동 (지도 핀 클릭 → 경비 버튼 클릭 시)
+    if st.session_state.get("_goto_expenses"):
+        exp_place = st.session_state.pop("_goto_expenses")
+        st.session_state["expense_prefill"] = exp_place
+        components.html("""<script>
+        setTimeout(function(){
+            var tabs = window.parent.document.querySelectorAll('[data-baseweb="tab"]');
+            if (tabs && tabs[2]) tabs[2].click();
+        }, 80);
+        </script>""", height=0)
+
     # 📊 여행 경비내역 탭으로 JS 강제 이동 (경비 관리 탭의 "전체 내역" 버튼 클릭 시)
     if st.session_state.pop("_goto_history", False):
         components.html("""<script>

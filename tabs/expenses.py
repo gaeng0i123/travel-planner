@@ -12,7 +12,8 @@ def render(data: dict) -> None:
     
     # 1. 초기화 및 연동 (지도 핀에서 넘어온 경우 등)
     q_params = st.query_params
-    prefilled_place = q_params.get("place", "")
+    prefilled_place = (q_params.get("place", "")
+                       or st.session_state.pop("expense_prefill", ""))
     
     if "ocr_result" not in st.session_state:
         st.session_state.ocr_result = {}
