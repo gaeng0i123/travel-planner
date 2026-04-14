@@ -120,15 +120,8 @@ if q_params.get("tab") == "expenses":
     place = q_params.get("place", "")
     if place:
         st.info(f"📍 **{place}** 경비 입력")
-    # 탭 닫기 (window.open으로 연 탭은 close 허용)
-    st.markdown(
-        '<a href="javascript:window.close()" '
-        'style="display:inline-block;padding:8px 18px;'
-        'background:#4A90D9;color:white;border-radius:8px;'
-        'text-decoration:none;font-size:15px;font-weight:600;">'
-        '← 지도로 돌아가기</a>',
-        unsafe_allow_html=True,
-    )
+    if st.button("← 지도로 돌아가기", use_container_width=False):
+        components.html("<script>window.parent.close();</script>", height=0)
     expenses.render(data)
 else:
     # 일반 탭 내비게이션
