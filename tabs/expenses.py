@@ -90,32 +90,39 @@ def _render_manual_form(data: dict, prefilled_place: str) -> None:
         exp_memo = st.text_area("메모", key=memo_key)
 
         if st.form_submit_button("💾 저장하기", use_container_width=True):
-            st.session_state.manual_form_key += 1  # 폼 초기화 (memo_key도 무효화)
-            new_row = {
-                "날짜": exp_date.strftime("%Y-%m-%d"),
-                "시간": exp_time,
-                "장소명": exp_place,
-                "품목": exp_items,
-                "단가": "", "수량": "",
-                "총액(VND)": exp_vnd, "환산금액(KRW)": exp_krw,
-                "결제수단": exp_method, "memo": exp_memo,
-                "영수증URL": ""
-            }
-            _save_and_rerun(new_row, data)
+            if not exp_items.strip() and exp_vnd == 0:
+                st.warning("품목 또는 금액을 입력해주세요.")
+            else:
+                st.session_state.manual_form_key += 1  # 폼 초기화 (memo_key도 무효화)
+                new_row = {
+                    "날짜": exp_date.strftime("%Y-%m-%d"),
+                    "시간": exp_time,
+                    "장소명": exp_place,
+                    "품목": exp_items,
+                    "단가": "", "수량": "",
+                    "총액(VND)": exp_vnd, "환산금액(KRW)": exp_krw,
+                    "결제수단": exp_method, "memo": exp_memo,
+                    "영수증URL": ""
+                }
+                _save_and_rerun(new_row, data)
 
 def _render_ocr_form(data: dict) -> None:
     # 파일 업로더 리셋용 키 카운터
     if "ocr_upload_key" not in st.session_state:
         st.session_state.ocr_upload_key = 0
-
-    if "ocr_memo_cleared" not in st.session_state:
-        st.session_state.ocr_memo_cleared = False
+    # 메모 textarea key 세대 카운터
+    if "ocr_memo_gen" not in st.session_state:
+        st.session_state.ocr_memo_gen = 0
 
     # 핀에서 넘어온 장소명 (메모 기본값용)
     place_from_pin = st.query_params.get("place", "")
-    default_memo = "" if st.session_state.ocr_memo_cleared else (
-        f"[{place_from_pin}] OCR 인식" if place_from_pin else "OCR 인식"
-    )
+    ocr_memo_skey = f"ocr_memo_{st.session_state.ocr_memo_gen}"
+    default_memo = f"[{place_from_pin}] OCR 인식" if place_from_pin else "OCR 인식"
+    if ocr_memo_skey not in st.session_state:
+        st.session_state[ocr_memo_skey] = default_memo
+
+    def _clear_ocr_memo():
+        st.session_state[ocr_memo_skey] = ""
 
     uploaded_file = st.file_uploader(
         "영수증 사진 업로드", type=["jpg", "jpeg", "png"],
@@ -136,6 +143,9 @@ def _render_ocr_form(data: dict) -> None:
 
     if st.session_state.ocr_result:
         res = st.session_state.ocr_result
+        # 메모 삭제 버튼 — 폼 바깥에서 on_click 콜백으로 처리 (폼 submit 없이 메모만 초기화)
+        st.button("🗑️ 메모 삭제", on_click=_clear_ocr_memo,
+                  key=f"ocr_clear_btn_{st.session_state.ocr_memo_gen}")
         with st.form("ocr_expense_form"):
             col1, col2 = st.columns(2)
             with col1:
@@ -187,17 +197,10 @@ def _render_ocr_form(data: dict) -> None:
                     unsafe_allow_html=True,
                 )
 
-            o_memo = st.text_area("메모", value=default_memo)
+            o_memo = st.text_area("메모", key=ocr_memo_skey)
 
-            ocr_save, ocr_clear = st.columns([3, 1])
-            with ocr_save:
-                save_ocr = st.form_submit_button("💾 품목별 저장하기", use_container_width=True)
-            with ocr_clear:
-                clear_ocr = st.form_submit_button("🗑️ 메모 삭제", use_container_width=True)
+            save_ocr = st.form_submit_button("💾 품목별 저장하기", use_container_width=True)
 
-            if clear_ocr:
-                st.session_state.ocr_memo_cleared = True
-                st.rerun()
             if save_ocr:
                 receipt_id = datetime.now().strftime("RCP_%m%d_%H%M%S")
                 new_rows = []
@@ -228,7 +231,7 @@ def _render_ocr_form(data: dict) -> None:
                     st.session_state.ocr_result = {}
                     st.session_state.receipt_image = None
                     st.session_state.ocr_upload_key += 1  # 파일 업로더 리셋
-                    st.session_state.ocr_memo_cleared = False  # 메모 기본값 복원
+                    st.session_state.ocr_memo_gen += 1   # 메모 key 세대 올려서 기본값 복원
                     with st.spinner("시트에 저장 중..."):
                         update_sheet(df_final, "expenses")
                     st.toast(f"✅ {len(new_rows)}개 품목 저장 완료!")
