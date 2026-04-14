@@ -23,10 +23,12 @@ def render(data: dict) -> None:
         st.info("아직 입력된 경비가 없습니다.")
         return
 
-    # 저장시간 우선 → 날짜/시간 최신순 정렬
-    sort_cols = [c for c in ["저장시간", "날짜", "시간"] if c in df_all.columns]
-    if sort_cols:
-        df_all = df_all.sort_values(by=sort_cols, ascending=False)
+    # 실제 돈 쓴 순서 (날짜·시간 오름차순) — 시간 문자열 비교 오류 방지를 위해 datetime 파싱
+    df_all["_dt"] = pd.to_datetime(
+        df_all["날짜"].astype(str) + " " + df_all["시간"].astype(str),
+        errors="coerce",
+    )
+    df_all = df_all.sort_values(by="_dt", ascending=True).drop(columns=["_dt"])
     df_all = df_all.reset_index(drop=True)
 
     # ── 일차 필터 버튼 ──────────────────────────────────────────────────────
