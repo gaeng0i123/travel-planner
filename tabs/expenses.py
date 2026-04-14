@@ -55,8 +55,8 @@ def _render_manual_form(data: dict, prefilled_place: str) -> None:
     if "manual_form_key" not in st.session_state:
         st.session_state.manual_form_key = 0
 
-    # memo_key에 form_key 포함 → 저장 후 자동으로 새 키 = 기본값으로 초기화
-    memo_key = f"manual_memo_{st.session_state.manual_form_key}"
+    fk = st.session_state.manual_form_key
+    memo_key = f"manual_memo_{fk}"
     default_memo = f"[{prefilled_place}]\n" if prefilled_place else ""
     if memo_key not in st.session_state:
         st.session_state[memo_key] = default_memo
@@ -64,47 +64,51 @@ def _render_manual_form(data: dict, prefilled_place: str) -> None:
     def _clear_memo():
         st.session_state[memo_key] = ""
 
-    # 메모 삭제: 폼 바깥 버튼 + on_click → 폼 submit 없이 메모만 초기화
-    st.button("🗑️ 메모 삭제", on_click=_clear_memo,
-              key=f"clear_memo_btn_{st.session_state.manual_form_key}")
+    # st.form 없이 일반 위젯 사용 — 저장·삭제 버튼을 같은 줄에 배치하기 위함
+    col1, col2 = st.columns(2)
+    with col1:
+        exp_date = st.date_input("날짜", key=f"m_date_{fk}", value=datetime.now())
+        exp_time = st.text_input("시간", key=f"m_time_{fk}", value=datetime.now().strftime("%H:%M"))
+    with col2:
+        exp_place = st.text_input("장소명", key=f"m_place_{fk}", value=prefilled_place)
+        exp_method = st.selectbox("결제수단", ["현금", "카드"], key=f"m_method_{fk}")
 
-    with st.form(f"manual_expense_form_{st.session_state.manual_form_key}"):
-        col1, col2 = st.columns(2)
-        with col1:
-            exp_date = st.date_input("날짜", datetime.now())
-            exp_time = st.text_input("시간", datetime.now().strftime("%H:%M"))
-        with col2:
-            exp_place = st.text_input("장소명", value=prefilled_place)
-            exp_method = st.selectbox("결제수단", ["현금", "카드"])
+    exp_items = st.text_input("품목 (식비, 쇼핑 등)", key=f"m_items_{fk}")
 
-        exp_items = st.text_input("품목 (식비, 쇼핑 등)")
+    col3, col4 = st.columns(2)
+    with col3:
+        exp_vnd = st.number_input("금액 (VND)", min_value=0, step=1000, key=f"m_vnd_{fk}")
+    with col4:
+        exp_krw = int(exp_vnd * VND_TO_KRW)
+        st.text_input("환산금액 (KRW)", value=f"{exp_krw:,}원", disabled=True)
 
-        col3, col4 = st.columns(2)
-        with col3:
-            exp_vnd = st.number_input("금액 (VND)", min_value=0, step=1000)
-        with col4:
-            exp_krw = int(exp_vnd * VND_TO_KRW)
-            st.text_input("환산금액 (KRW)", value=f"{exp_krw:,}원", disabled=True)
+    exp_memo = st.text_area("메모", key=memo_key)
 
-        # key로 관리 → on_click 콜백이 직접 세션 값을 바꿔 즉시 반영
-        exp_memo = st.text_area("메모", key=memo_key)
+    # 저장(70%) + 메모 삭제(30%) 같은 줄 배치
+    bc1, bc2 = st.columns([7, 3])
+    with bc1:
+        save_btn = st.button("💾 저장하기", key=f"m_save_{fk}",
+                             use_container_width=True, type="primary")
+    with bc2:
+        st.button("🗑️ 메모 삭제", on_click=_clear_memo,
+                  key=f"m_clear_{fk}", use_container_width=True)
 
-        if st.form_submit_button("💾 저장하기", use_container_width=True):
-            if not exp_items.strip() and exp_vnd == 0:
-                st.warning("품목 또는 금액을 입력해주세요.")
-            else:
-                st.session_state.manual_form_key += 1  # 폼 초기화 (memo_key도 무효화)
-                new_row = {
-                    "날짜": exp_date.strftime("%Y-%m-%d"),
-                    "시간": exp_time,
-                    "장소명": exp_place,
-                    "품목": exp_items,
-                    "단가": "", "수량": "",
-                    "총액(VND)": exp_vnd, "환산금액(KRW)": exp_krw,
-                    "결제수단": exp_method, "memo": exp_memo,
-                    "영수증URL": ""
-                }
-                _save_and_rerun(new_row, data)
+    if save_btn:
+        if not exp_items.strip() and exp_vnd == 0:
+            st.warning("품목 또는 금액을 입력해주세요.")
+        else:
+            st.session_state.manual_form_key += 1  # 폼 초기화 (모든 m_*_{fk} 키 무효화)
+            new_row = {
+                "날짜": exp_date.strftime("%Y-%m-%d"),
+                "시간": exp_time,
+                "장소명": exp_place,
+                "품목": exp_items,
+                "단가": "", "수량": "",
+                "총액(VND)": exp_vnd, "환산금액(KRW)": exp_krw,
+                "결제수단": exp_method, "memo": exp_memo,
+                "영수증URL": ""
+            }
+            _save_and_rerun(new_row, data)
 
 def _render_ocr_form(data: dict) -> None:
     # 파일 업로더 리셋용 키 카운터
