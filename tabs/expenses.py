@@ -106,8 +106,7 @@ def _render_manual_form(data: dict, prefilled_place: str) -> None:
                 "단가": "", "수량": "",
                 "총액(VND)": exp_vnd, "환산금액(KRW)": exp_krw,
                 "결제수단": exp_method, "memo": exp_memo,
-                "영수증URL": ""
-            }
+                            }
             _save_and_rerun(new_row, data)
 
 def _render_ocr_form(data: dict) -> None:
