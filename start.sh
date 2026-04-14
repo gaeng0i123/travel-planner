@@ -19,7 +19,7 @@ if [ ! -f ".streamlit/secrets.toml" ]; then
     echo "🔑 설정 파일(secrets.toml)이 없습니다."
     if [ -f "key.json" ]; then
         echo "🛠️ key.json을 발견했습니다. 설정을 자동 생성합니다..."
-        python3 fix_secrets.py
+        python3 scripts/fix_secrets.py
     else
         echo "❌ 에러: key.json 파일이 없습니다. 구글 서비스 계정 키를 넣어주세요."
         exit 1

@@ -38,7 +38,7 @@
 - `budget`: category, item, check_in, check_out, nights, price_per_night, cost, cancel_deadline, memo, paid
 - `checklist`: item, done
 - `hotels`: 이름, 가격, 취소기한, 링크, 장단점
-- `상세일정`: 날짜, 요일, 시간, 확정(ok/빈값), 내용, 메모, 장소명, 구글지도, lat, lon, 소요시간, 이동시간
+- `상세일정`: 날짜, 요일, 시간, 확정(ok/빈값), 내용, 메모, 장소명, 소요시간, 이동시간, 구글지도, lat, lon, open, close
 
 ## 4. 구글 독스
 - **thinklog 문서:** 여행 고민 및 일정 로그. 앱이 서비스 계정으로 읽기 전용 접근.
