@@ -256,11 +256,8 @@ def _render_expense_list(data: dict) -> None:
         st.info("아직 입력된 경비가 없습니다. 위 폼에서 경비를 추가해 보세요!")
         return
 
-    # 저장시간 우선 → 날짜/시간 순으로 최신순 정렬
-    sort_cols = [c for c in ["저장시간", "날짜", "시간"] if c in df_raw.columns]
-    if sort_cols:
-        df_raw = df_raw.sort_values(by=sort_cols, ascending=False)
-    df_raw = df_raw.reset_index(drop=True)
+    # 시트 삽입 순서 역순 → 가장 최근에 추가한 행이 맨 위
+    df_raw = df_raw.iloc[::-1].reset_index(drop=True)
 
     if "edit_idx" not in st.session_state:
         st.session_state.edit_idx = None
@@ -456,7 +453,13 @@ def _render_expense_list(data: dict) -> None:
                     st.rerun()
 
     if total_groups > 5:
-        st.caption(f"최근 5건 표시 중 (전체 {total_groups}건) — 전체 내역은 '📊 여행 경비내역' 탭에서 확인")
+        cap_col, btn_col = st.columns([3, 1])
+        with cap_col:
+            st.caption(f"최근 5건 표시 중 (전체 {total_groups}건)")
+        with btn_col:
+            if st.button("📊 전체 내역 →", key="nav_to_history", use_container_width=True):
+                st.session_state._goto_history = True
+                st.rerun()
 
 def _save_and_rerun(new_row: dict, data: dict) -> None:
     """공통 저장 로직 — 즉시 로컬 반영 후 대기열 적재"""

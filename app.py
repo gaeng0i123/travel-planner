@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 
 # 반드시 첫 번째 Streamlit 명령
 st.set_page_config(
@@ -130,6 +131,15 @@ if q_params.get("tab") == "expenses":
     expenses.render(data)
 else:
     # 일반 탭 내비게이션
+    # 📊 여행 경비내역 탭으로 JS 강제 이동 (경비 관리 탭의 "전체 내역" 버튼 클릭 시)
+    if st.session_state.pop("_goto_history", False):
+        components.html("""<script>
+        setTimeout(function(){
+            var tabs = window.parent.document.querySelectorAll('[data-baseweb="tab"]');
+            if (tabs && tabs[3]) tabs[3].click();
+        }, 80);
+        </script>""", height=0)
+
     tab_prep, tab_trip, tab_exp, tab_hist, tab_ai = st.tabs([
         "🏗️ 여행 준비",
         "🛵 여행 현지",
