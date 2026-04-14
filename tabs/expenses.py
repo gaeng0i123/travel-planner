@@ -249,15 +249,15 @@ def _render_ocr_form(data: dict) -> None:
                 st.rerun()
 
 def _render_expense_list(data: dict) -> None:
-    st.subheader("📊 여행 경비 내역")
+    st.subheader("📋 최근 저장 내역")
     df_raw = pd.DataFrame(data.get("expenses", []))
 
     if df_raw.empty:
         st.info("아직 입력된 경비가 없습니다. 위 폼에서 경비를 추가해 보세요!")
         return
 
-    # 날짜/시간 최신순 정렬 후 인덱스 재설정
-    sort_cols = [c for c in ["날짜", "시간"] if c in df_raw.columns]
+    # 저장시간 우선 → 날짜/시간 순으로 최신순 정렬
+    sort_cols = [c for c in ["저장시간", "날짜", "시간"] if c in df_raw.columns]
     if sort_cols:
         df_raw = df_raw.sort_values(by=sort_cols, ascending=False)
     df_raw = df_raw.reset_index(drop=True)
@@ -278,6 +278,10 @@ def _render_expense_list(data: dict) -> None:
         df_raw.at[i, "_gkey"] = key
         if key not in group_keys:
             group_keys.append(key)
+
+    # 최근 5개 그룹만 표시
+    total_groups = len(group_keys)
+    group_keys = group_keys[:5]
 
     for gkey in group_keys:
         g = df_raw[df_raw["_gkey"] == gkey]
@@ -450,6 +454,9 @@ def _render_expense_list(data: dict) -> None:
                 if st.button("➕ 품목 추가", key=f"addrow_{gkey}", use_container_width=True):
                     st.session_state.add_row_gkey = gkey
                     st.rerun()
+
+    if total_groups > 5:
+        st.caption(f"최근 5건 표시 중 (전체 {total_groups}건) — 전체 내역은 '📊 여행 경비내역' 탭에서 확인")
 
 def _save_and_rerun(new_row: dict, data: dict) -> None:
     """공통 저장 로직 — 즉시 로컬 반영 후 대기열 적재"""

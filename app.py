@@ -74,7 +74,7 @@ st.markdown("""
 # 로컬 모듈 — set_page_config 이후에 임포트해야 conn 생성 순서가 안전
 from utils.auth import check_password                              # noqa: E402
 from utils.sheets import load_all_data, flush_queue, pending_count # noqa: E402
-from tabs import prep, trip, expenses, ai                          # noqa: E402
+from tabs import prep, trip, expenses, history, ai                 # noqa: E402
 
 # 로그인
 if not check_password():
@@ -130,10 +130,11 @@ if q_params.get("tab") == "expenses":
     expenses.render(data)
 else:
     # 일반 탭 내비게이션
-    tab_prep, tab_trip, tab_exp, tab_ai = st.tabs([
+    tab_prep, tab_trip, tab_exp, tab_hist, tab_ai = st.tabs([
         "🏗️ 여행 준비",
         "🛵 여행 현지",
         "💰 경비 관리",
+        "📊 여행 경비내역",
         "💬 AI 여행 비서",
     ])
 
@@ -145,6 +146,9 @@ else:
 
     with tab_exp:
         expenses.render(data)
+
+    with tab_hist:
+        history.render(data)
 
     with tab_ai:
         ai.render()
