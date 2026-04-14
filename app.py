@@ -120,9 +120,9 @@ if q_params.get("tab") == "expenses":
     place = q_params.get("place", "")
     if place:
         st.info(f"📍 **{place}** 경비 입력")
-    # 브라우저 뒤로가기 (bfcache로 지도 즉시 복원)
+    # 탭 닫기 (window.open으로 연 탭은 close 허용)
     st.markdown(
-        '<a href="javascript:history.back()" '
+        '<a href="javascript:window.close()" '
         'style="display:inline-block;padding:8px 18px;'
         'background:#4A90D9;color:white;border-radius:8px;'
         'text-decoration:none;font-size:15px;font-weight:600;">'

@@ -215,10 +215,12 @@ def _render_day(df_confirmed: pd.DataFrame, memo_places: list) -> None:
         ).add_to(m)
 
     for lat, lon, num, time_val, content, place, gmap_url in pins:
-        gmap_link  = gmap_url or f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
+        gmap_link    = gmap_url or f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
+        expense_link = f"/?tab=expenses&place={place or content}"
         popup_html = (
             f"<b>{num}. {place or content}</b><br>{time_val}"
             f"<br><a href='{gmap_link}' target='_blank' style='color:#4A90D9;'>🗺️ 구글맵으로 보기</a>"
+            f"<br><a href='javascript:void(0)' onclick=\"window.open(window.top.location.origin+'{expense_link}','_blank')\" style='color:#FF4B4B;font-weight:bold;'>💰 경비 기록하기</a>"
         )
         folium.Marker(
             location=[lat, lon],
@@ -241,9 +243,11 @@ def _render_day(df_confirmed: pd.DataFrame, memo_places: list) -> None:
             mmemo  = str(r.get("메모", "")).strip()
             mgmap  = str(r.get("구글지도", "")
                          or f"https://www.google.com/maps/search/?api=1&query={mlat},{mlon}")
+            expense_link = f"/?tab=expenses&place={mplace}"
             popup_html = (
                 f"<b>📌 {mplace}</b>" + (f"<br>{mmemo}" if mmemo else "")
                 + f"<br><a href='{mgmap}' target='_blank' style='color:#4A90D9;'>🗺️ 구글맵으로 보기</a>"
+                + f"<br><a href='javascript:void(0)' onclick=\"window.open(window.top.location.origin+'{expense_link}','_blank')\" style='color:#FF4B4B;font-weight:bold;'>💰 경비 기록하기</a>"
             )
             folium.Marker(
                 location=[mlat, mlon],
@@ -347,9 +351,11 @@ def _render_memo(memo_places: list) -> None:
             mmemo  = str(r.get("메모", "")).strip()
             mgmap  = str(r.get("구글지도", "")
                          or f"https://www.google.com/maps/search/?api=1&query={mlat},{mlon}")
+            expense_link = f"/?tab=expenses&place={mplace}"
             popup_html = (
                 f"<b>{idx}. {mplace}</b>" + (f"<br>{mmemo}" if mmemo else "")
                 + f"<br><a href='{mgmap}' target='_blank' style='color:#4A90D9;'>🗺️ 구글맵으로 보기</a>"
+                + f"<br><a href='javascript:void(0)' onclick=\"window.open(window.top.location.origin+'{expense_link}','_blank')\" style='color:#FF4B4B;font-weight:bold;'>💰 경비 기록하기</a>"
             )
             folium.Marker(
                 location=[mlat, mlon],
