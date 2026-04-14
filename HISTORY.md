@@ -31,7 +31,9 @@
 - [x] 에어컨카페·스파 장소 목록 버튼화: 탭 가능, 클릭 시 지도 핀 이동 + 화면 스크롤.
 - [x] 장소 클릭 스크롤: 캡션(📅 N일차...) 화면 상단 이동. scroll 이벤트 리스너 + 900ms 안전망 조합으로 Streamlit 스크롤 복원 대응.
 - [x] **2026-04-15:** 확정 핀·memo 핀 팝업에 "💰 경비 기록하기" 링크 추가. 클릭 시 `/?tab=expenses&place=장소명` 새 탭으로 열기.
-- [⚠️] **2026-04-15:** 핀 팝업 경비 링크 about:blank 오류 수정 시도: Folium iframe 내 상대URL이 iframe src 기준으로 해석 → `window.top.location.origin+경로` 절대URL 조립 방식으로 변경. 동작 미검수.
+- [x] **2026-04-15:** 핀 팝업 경비 링크 about:blank 오류 수정 완료: Folium iframe 내 상대URL → `window.top.location.origin+경로` 절대URL 조립. ✅ 크롬·사파리 동작 확인.
+- [x] **2026-04-15:** 지도로 돌아가기 탭 닫기 완성: `window.close()` 계열 모두 실패 → `components.html` 자식 iframe에서 `window.parent.close()` 호출 방식으로 해결. ✅ 크롬·사파리 동작 확인.
+- [x] **2026-04-15:** st_folium `returned_objects` 핀 클릭 감지: 지도 아래 "💰 장소명 — 경비 기록하기" Streamlit 버튼 표시. 클릭 시 경비 탭 이동 + 장소명 자동 채움.
 
 ### UI / 모바일 최적화
 - [x] 동기화 버튼 상단 이동: 사이드바 → 타이틀 우측.
@@ -100,7 +102,7 @@
 | 경비 합계 AttributeError | 시트 컬럼명과 코드 키값 불일치 | 컬럼 존재 여부 확인 후 합계 계산 |
 | 메모 삭제 반복 클릭 무반응 | `st.form` 내부에서 버튼 상태가 매 rerun마다 리셋됨 | `on_click` 콜백 + 카운터 key 갱신 방식으로 전환 |
 | 저장 후 폼 미초기화 | 필드 key 고정으로 저장 후에도 이전 값 유지 | `manual_form_key` 카운터 증가로 key 갱신 |
-| 경비 링크 about:blank | Folium iframe 내 상대URL이 iframe src 기준으로 해석 | `window.top.location.origin` 접두어 절대URL 조립 (미검수) |
+| 경비 링크 about:blank | Folium iframe 내 상대URL이 iframe src 기준으로 해석 | `window.top.location.origin` 절대URL 조립. ✅ 확인 |
 | window.close() 미작동 | 크롬: same-origin JS window.open()으로 연 탭만 닫기 허용 | close 버튼 제거, href="/" 링크로 대체 |
 | 시간 정렬 버그 | 문자열 비교 시 "9:00" > "13:00" 오류 | pd.to_datetime() 파싱 후 정렬 |
 
@@ -112,7 +114,6 @@
 |---|---|---|
 | **드라이브 업로드 403** | ❌ 미해결 | 서비스 계정의 저장 용량이 0이며, 사용자 폴더로의 권한 위임 미작동. 공유 드라이브 사용 또는 OAuth 방식 전환 검토 필요. |
 | **Gemini OCR 동작 미검증** | ⚠️ 코드완료 | `utils/ocr.py` 재작성 완료 (`gemini-2.5-flash`, JSON 파싱, 키 체크). 실제 영수증 이미지로 동작 검증 필요. |
-| **핀 팝업 경비 링크 about:blank** | ⚠️ 수정완료·미검수 | `window.top.location.origin` 방식으로 절대URL 조립하여 수정. 실제 Streamlit Cloud 환경에서 동작 미검증. |
 
 ---
 
@@ -159,4 +160,4 @@
 - [ ] **영수증 OCR 실동작 검증:** 실제 영수증 사진으로 Gemini API 분석 결과 검증.
 
 ---
-*마지막 업데이트: 2026년 4월 15일 (경비 관리 탭 고도화 — 오프라인 큐·메모버그 수정·OCR한글번역·유효성검증, 여행 경비내역 탭 신설, 핀 팝업 경비링크 수정(미검수))*
+*마지막 업데이트: 2026년 4월 15일 (경비 관리 탭 고도화 + 핀 팝업 경비 연동 완성 — 새 탭 열기·탭 닫기(window.parent.close) 모두 동작 확인)*
