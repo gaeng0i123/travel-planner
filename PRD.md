@@ -21,44 +21,31 @@
 - **지도:** 확정 일정만 번호 핀(1,2,3...) 표시. 핀 순서대로 점선 연결. 동일 좌표 핀은 오프셋으로 분리 표시. 핀 팝업에 구글맵 링크 포함.
 - **일정 목록:** 모바일 최적화 3줄 레이아웃 — 번호·시간·내용·소요 / 📍 장소명 버튼(탭 가능) / 메모. 장소명 클릭 시 해당 핀으로 지도 이동 + 화면 스크롤.
 - **스크롤:** 장소 클릭 시 "📅 N일차 — 확정 M개" 캡션이 화면 상단으로 이동. scroll 이벤트 리스너 + 900ms 안전망 조합.
-- **(예정) 경비 입력:** VND 실시간 경비 입력 → KRW 자동 환산.
-- **(예정) 영수증 OCR:** AI API 환경 구성 후 추가.
+- **핀 팝업 연동:** 확정 핀 및 memo 핀 팝업에 "💰 경비 기록하기" 링크 포함. 클릭 시 `/?tab=expenses&place=장소명` 새 탭 열기 → 경비 입력 후 탭 닫기로 지도 복귀.
 
-### 2.4. AI 여행 비서 탭
+### 2.4. 경비 관리 탭
+- **내비게이션:** 핀 팝업 클릭 시 `/?tab=expenses&place=...` 를 새 탭으로 열고, `window.close()` 버튼으로 지도 화면 복귀. 탭 동기화 문제를 새 탭 방식으로 우회 해결.
+- **입력 방식:**
+    *   **직접 입력:** 날짜, 시간, 장소명, 품목, 금액(VND) 입력. 핀에서 넘어온 경우 장소명 자동 채움. 메모 삭제 버튼 + form key 기반 초기화 지원.
+    *   **영수증 OCR (⚠️ 코드 구현 완료, 동작 미검증):** `utils/ocr.py` — Gemini `gemini-2.5-flash` 연동. 품목별 단가·수량 추출, 합계 검증(영수증 합계 vs 품목 합계 비교), JSON 파싱 완료. API 키는 `st.secrets["GEMINI_API_KEY"]` 에서 읽음.
+- **이미지 보관 (❌ 미해결):** `utils/drive.py` 구현 완료이나 서비스 계정의 저장 용량 부족 (`403 Forbidden`) 근본 원인 미해결.
+- **가계부 뷰어:** 영수증ID 기준 그룹핑 표시. 장소·날짜·결제수단·합계 헤더. 품목별 인라인 편집·삭제·추가. 그룹 단위 메모 편집. VND/KRW 환산 표시.
+
+### 2.5. AI 여행 비서 탭
 - 구글 독스 thinklog 실시간 불러오기 (서비스 계정 읽기 전용).
 - 헤딩(h1/h2/h3) CSS 소형화로 가독성 개선.
 - Gemini / Claude 외부 링크 버튼 제공.
 
-### 2.5. 보안 정책
-- 서비스 계정 방식으로 나만 접근 가능한 비공개 구글 시트.
+### 2.6. 보안 정책
+- 서비스 계정 방식으로 나만 접근 가능한 비공개 구글 시트 및 드라이브 폴더.
 - `key.json` 로컬 사용 후 삭제, 깃 포함 금지.
-- 무비용 운영: 구글 시트 무료 + Streamlit Community Cloud 무료.
+- `secrets.toml`을 통한 보안 설정 관리 시도 중.
 
 ## 3. 데이터 구조 (Google Sheets)
 - `budget`: category, item, check_in, check_out, nights, price_per_night, cost, cancel_deadline, memo, paid
 - `checklist`: item, done
 - `hotels`: 이름, 가격, 취소기한, 링크, 장단점
 - `상세일정`: 날짜, 요일, 시간, 확정(ok/빈값), 내용, 메모, 장소명, 소요시간, 이동시간, 구글지도, lat, lon, open, close
+- `expenses`: 날짜, 시간, 장소명, 품목, 단가, 수량, 총액(VND), 환산금액(KRW), 결제수단, memo, 영수증URL
 
-## 4. 구글 독스
-- **thinklog 문서:** 여행 고민 및 일정 로그. 앱이 서비스 계정으로 읽기 전용 접근.
-- 수정은 구글 독스 앱/웹에서 직접.
-
-## 5. 로컬 디렉토리 구조
-```
-~/myproject/
-└── travel-planner/       ← 실제 프로젝트 (깃 루트)
-    ├── app.py
-    ├── start.sh           ← 실행 시 travel-planner/venv/ 자동 생성
-    ├── fix_secrets.py     ← key.json → secrets.toml 변환 도구
-    ├── requirements.txt
-    ├── .streamlit/
-    │   └── secrets.toml  ← 비공개 (깃 제외)
-    ├── HISTORY.md
-    └── PRD.md
-```
-
-## 6. 배포
-- **레포:** `github.com/gaeng0i123/travel-planner` (Public)
-- **브랜치:** `dev` 개발 → `main` 배포
-- **URL:** https://travel-planner-0i.streamlit.app/
+... (이하 생략)
