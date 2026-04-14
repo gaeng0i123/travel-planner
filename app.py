@@ -72,9 +72,9 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # 로컬 모듈 — set_page_config 이후에 임포트해야 conn 생성 순서가 안전
-from utils.auth import check_password      # noqa: E402
-from utils.sheets import load_all_data     # noqa: E402
-from tabs import prep, trip, expenses, ai  # noqa: E402
+from utils.auth import check_password                              # noqa: E402
+from utils.sheets import load_all_data, flush_queue, pending_count # noqa: E402
+from tabs import prep, trip, expenses, ai                          # noqa: E402
 
 # 로그인
 if not check_password():
@@ -85,12 +85,31 @@ if "data" not in st.session_state or st.session_state.data is None:
     st.session_state.data = load_all_data()
 data = st.session_state.data
 
+# 오프라인 모드 초기화
+if "offline_mode" not in st.session_state:
+    st.session_state.offline_mode = False
+if "sync_queue" not in st.session_state:
+    st.session_state.sync_queue = {}
+
 # 타이틀 + 동기화 버튼
-col_title, col_btn = st.columns([3.5, 1.2])
+pending = pending_count()
+col_title, col_offline, col_btn = st.columns([3.0, 1.0, 1.2])
 with col_title:
     st.title("🇻🇳 베트남 다낭 여행 ✈️")
+with col_offline:
+    offline_label = "✈️ 오프라인" if st.session_state.offline_mode else "🌐 온라인"
+    if st.button(offline_label, use_container_width=True):
+        st.session_state.offline_mode = not st.session_state.offline_mode
+        st.rerun()
 with col_btn:
-    if st.button("🔄 동기화", use_container_width=True):
+    sync_label = f"🔄 동기화 ({pending})" if pending else "🔄 동기화"
+    if st.button(sync_label, use_container_width=True):
+        if pending:
+            ok, failed = flush_queue()
+            if failed:
+                st.warning(f"저장 실패: {', '.join(failed)} — 인터넷 확인 후 재시도")
+            else:
+                st.toast(f"✅ {ok}개 항목 동기화 완료!")
         st.session_state.data = load_all_data()
         st.rerun()
 
