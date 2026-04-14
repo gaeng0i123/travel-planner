@@ -26,7 +26,7 @@ def load_all_data() -> dict:
         try:
             expenses_df = conn.read(spreadsheet=SHEET_URL, worksheet="expenses", ttl=0)
         except Exception:
-            expenses_df = pd.DataFrame(columns=["영수증ID", "날짜", "시간", "장소명", "품목", "단가", "수량", "총액(VND)", "환산금액(KRW)", "결제수단", "memo", "영수증URL"])
+            expenses_df = pd.DataFrame(columns=["영수증ID", "날짜", "시간", "장소명", "품목", "단가", "수량", "총액(VND)", "환산금액(KRW)", "결제수단", "memo", "영수증URL", "저장시간"])
 
         return {
             "budget":    budget_df.to_dict("records"),
