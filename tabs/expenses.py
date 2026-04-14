@@ -235,7 +235,8 @@ def _render_ocr_form(data: dict) -> None:
                     "날짜": o_date, "시간": o_time, "장소명": o_place,
                     "품목": name, "단가": unit_price, "수량": qty,
                     "총액(VND)": total_vnd, "환산금액(KRW)": int(total_vnd * VND_TO_KRW),
-                    "결제수단": o_method, "memo": o_memo, "영수증URL": ""
+                    "결제수단": o_method, "memo": o_memo, "영수증URL": "",
+                    "저장시간": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 })
             if new_rows:
                 df_exp = pd.DataFrame(data.get("expenses", []))
