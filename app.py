@@ -122,14 +122,10 @@ if q_params.get("tab") == "expenses":
         st.info(f"📍 **{place}** 경비 입력")
     # 새 탭을 닫아서 원래 지도 화면으로 복귀
     st.markdown(
-        '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">'
-        '<a href="javascript:window.close();" '
-        'style="padding:6px 14px;background:#f0f2f6;border-radius:6px;'
-        'text-decoration:none;color:#333;font-size:14px;">✖ 탭 닫기</a>'
-        '<a href="/" '
-        'style="padding:6px 14px;background:#4A90D9;color:white;border-radius:6px;'
-        'text-decoration:none;font-size:14px;">← 지도로 돌아가기</a>'
-        '</div>',
+        '<a href="/" style="display:inline-block;padding:8px 18px;'
+        'background:#4A90D9;color:white;border-radius:8px;'
+        'text-decoration:none;font-size:15px;font-weight:600;">'
+        '← 지도로 돌아가기</a>',
         unsafe_allow_html=True,
     )
     expenses.render(data)

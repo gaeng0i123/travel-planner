@@ -208,7 +208,7 @@ def _render_day(df_confirmed: pd.DataFrame, memo_places: list) -> None:
         popup_html = (
             f"<b>{num}. {place or content}</b><br>{time_val}"
             f"<br><a href='{gmap_link}' target='_blank' style='color:#4A90D9;'>🗺️ 구글맵으로 보기</a>"
-            f"<br><a href='javascript:void(0)' onclick=\"window.open('{expense_link}','_blank')\" style='color:#FF4B4B; font-weight:bold;'>💰 경비 기록하기</a>"
+            f"<br><a href='javascript:void(0)' onclick=\"window.open(window.top.location.origin+'{expense_link}','_blank')\" style='color:#FF4B4B; font-weight:bold;'>💰 경비 기록하기</a>"
         )
         folium.Marker(
             location=[lat, lon],
@@ -236,7 +236,7 @@ def _render_day(df_confirmed: pd.DataFrame, memo_places: list) -> None:
             popup_html = (
                 f"<b>📌 {mplace}</b>" + (f"<br>{mmemo}" if mmemo else "")
                 + f"<br><a href='{mgmap}' target='_blank' style='color:#4A90D9;'>🗺️ 구글맵으로 보기</a>"
-                + f"<br><a href='javascript:void(0)' onclick=\"window.open('{expense_link}','_blank')\" style='color:#FF4B4B; font-weight:bold;'>💰 경비 기록하기</a>"
+                + f"<br><a href='javascript:void(0)' onclick=\"window.open(window.top.location.origin+'{expense_link}','_blank')\" style='color:#FF4B4B; font-weight:bold;'>💰 경비 기록하기</a>"
             )
             folium.Marker(
                 location=[mlat, mlon],
@@ -332,7 +332,7 @@ def _render_memo(memo_places: list) -> None:
             popup_html = (
                 f"<b>{idx}. {mplace}</b>" + (f"<br>{mmemo}" if mmemo else "")
                 + f"<br><a href='{mgmap}' target='_blank' style='color:#4A90D9;'>🗺️ 구글맵으로 보기</a>"
-                + f"<br><a href='javascript:void(0)' onclick=\"window.open('{expense_link}','_blank')\" style='color:#FF4B4B; font-weight:bold;'>💰 경비 기록하기</a>"
+                + f"<br><a href='javascript:void(0)' onclick=\"window.open(window.top.location.origin+'{expense_link}','_blank')\" style='color:#FF4B4B; font-weight:bold;'>💰 경비 기록하기</a>"
             )
             folium.Marker(
                 location=[mlat, mlon],
