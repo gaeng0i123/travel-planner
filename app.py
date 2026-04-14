@@ -120,9 +120,11 @@ if q_params.get("tab") == "expenses":
     place = q_params.get("place", "")
     if place:
         st.info(f"📍 **{place}** 경비 입력")
-    # 새 탭을 닫아서 원래 지도 화면으로 복귀
+    # 원래 탭(지도)으로 포커스 이동 후 이 탭 닫기
     st.markdown(
-        '<a href="/" style="display:inline-block;padding:8px 18px;'
+        '<a href="javascript:void(0)" '
+        'onclick="if(window.opener){window.opener.focus();window.close();}else{window.close();}" '
+        'style="display:inline-block;padding:8px 18px;'
         'background:#4A90D9;color:white;border-radius:8px;'
         'text-decoration:none;font-size:15px;font-weight:600;">'
         '← 지도로 돌아가기</a>',
