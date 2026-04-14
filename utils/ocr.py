@@ -12,7 +12,7 @@ Extract the following from the receipt image:
 1. Date (YYYY-MM-DD)
 2. Time (HH:MM)
 3. Store Name
-4. Each line item: name, unit price (in VND), quantity
+4. Each line item: name in Korean (if the name is not Korean, translate it to Korean and append the original in parentheses, e.g. "반미 (Bánh mì)", "아이스아메리카노 (Iced Americano)"), unit price (in VND), quantity
 5. Payment Method: Cash or Card
 6. Receipt total (the grand total printed on the receipt, in VND). Use 0 if not found.
 
