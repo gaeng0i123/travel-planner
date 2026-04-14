@@ -1,3 +1,4 @@
+import re
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
@@ -52,6 +53,18 @@ _SCROLL_JS = """
 
 def _val(v) -> str:
     return "" if pd.isna(v) or str(v).strip() == "" else str(v).strip()
+
+
+def _extract_place_from_tooltip(tooltip: str) -> str:
+    """Folium 핀 tooltip에서 장소명 추출. '📌 장소명' 또는 'N. 장소명' 형식."""
+    if not tooltip:
+        return ""
+    if tooltip.startswith("📌 "):
+        return tooltip[2:].strip()
+    m = re.match(r"^\d+\. (.+)$", tooltip)
+    if m:
+        return m.group(1)
+    return ""
 
 
 def _collect_pins(df_day: pd.DataFrame) -> list:
@@ -203,12 +216,9 @@ def _render_day(df_confirmed: pd.DataFrame, memo_places: list) -> None:
 
     for lat, lon, num, time_val, content, place, gmap_url in pins:
         gmap_link  = gmap_url or f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
-        # 경비 입력 탭으로 이동하는 링크 (쿼리 파라미터 활용)
-        expense_link = f"/?tab=expenses&place={place or content}"
         popup_html = (
             f"<b>{num}. {place or content}</b><br>{time_val}"
             f"<br><a href='{gmap_link}' target='_blank' style='color:#4A90D9;'>🗺️ 구글맵으로 보기</a>"
-            f"<br><a href='javascript:void(0)' onclick=\"window.top.postMessage({{type:'go_expense',url:window.top.location.origin+'{expense_link}'}},'*')\" style='color:#FF4B4B; font-weight:bold;'>💰 경비 기록하기</a>"
         )
         folium.Marker(
             location=[lat, lon],
@@ -231,12 +241,9 @@ def _render_day(df_confirmed: pd.DataFrame, memo_places: list) -> None:
             mmemo  = str(r.get("메모", "")).strip()
             mgmap  = str(r.get("구글지도", "")
                          or f"https://www.google.com/maps/search/?api=1&query={mlat},{mlon}")
-            # 경비 입력 탭으로 이동하는 링크
-            expense_link = f"/?tab=expenses&place={mplace}"
             popup_html = (
                 f"<b>📌 {mplace}</b>" + (f"<br>{mmemo}" if mmemo else "")
                 + f"<br><a href='{mgmap}' target='_blank' style='color:#4A90D9;'>🗺️ 구글맵으로 보기</a>"
-                + f"<br><a href='javascript:void(0)' onclick=\"window.top.postMessage({{type:'go_expense',url:window.top.location.origin+'{expense_link}'}},'*')\" style='color:#FF4B4B; font-weight:bold;'>💰 경비 기록하기</a>"
             )
             folium.Marker(
                 location=[mlat, mlon],
@@ -254,7 +261,20 @@ def _render_day(df_confirmed: pd.DataFrame, memo_places: list) -> None:
             pass
 
     map_key = f"day_map_{map_center[0]}_{map_center[1]}_{map_zoom}"
-    st_folium(m, use_container_width=True, height=500, key=map_key)
+    map_data = st_folium(m, use_container_width=True, height=500, key=map_key,
+                         returned_objects=["last_object_clicked_tooltip"])
+
+    # 핀 클릭 시 경비 버튼 표시
+    raw_tooltip = (map_data or {}).get("last_object_clicked_tooltip") or ""
+    if raw_tooltip:
+        st.session_state["_map_tooltip"] = raw_tooltip
+    clicked_place = _extract_place_from_tooltip(st.session_state.get("_map_tooltip", ""))
+    if clicked_place:
+        if st.button(f"💰 {clicked_place} — 경비 기록하기",
+                     type="primary", use_container_width=True, key="day_expense_btn"):
+            st.session_state.pop("_map_tooltip", None)
+            st.session_state["_goto_expenses"] = clicked_place
+            st.rerun()
 
     # 일정 목록
     st.subheader(f"📋 {selected_label} 확정 일정")
@@ -327,12 +347,9 @@ def _render_memo(memo_places: list) -> None:
             mmemo  = str(r.get("메모", "")).strip()
             mgmap  = str(r.get("구글지도", "")
                          or f"https://www.google.com/maps/search/?api=1&query={mlat},{mlon}")
-            # 경비 입력 탭으로 이동하는 링크
-            expense_link = f"/?tab=expenses&place={mplace}"
             popup_html = (
                 f"<b>{idx}. {mplace}</b>" + (f"<br>{mmemo}" if mmemo else "")
                 + f"<br><a href='{mgmap}' target='_blank' style='color:#4A90D9;'>🗺️ 구글맵으로 보기</a>"
-                + f"<br><a href='javascript:void(0)' onclick=\"window.top.postMessage({{type:'go_expense',url:window.top.location.origin+'{expense_link}'}},'*')\" style='color:#FF4B4B; font-weight:bold;'>💰 경비 기록하기</a>"
             )
             folium.Marker(
                 location=[mlat, mlon],
@@ -350,7 +367,19 @@ def _render_memo(memo_places: list) -> None:
             pass
 
     memo_map_key = f"memo_map_{memo_map_center[0]}_{memo_map_center[1]}"
-    st_folium(m, use_container_width=True, height=400, key=memo_map_key)
+    memo_data = st_folium(m, use_container_width=True, height=400, key=memo_map_key,
+                          returned_objects=["last_object_clicked_tooltip"])
+
+    raw_memo_tooltip = (memo_data or {}).get("last_object_clicked_tooltip") or ""
+    if raw_memo_tooltip:
+        st.session_state["_map_tooltip"] = raw_memo_tooltip
+    memo_clicked = _extract_place_from_tooltip(st.session_state.get("_map_tooltip", ""))
+    if memo_clicked:
+        if st.button(f"💰 {memo_clicked} — 경비 기록하기",
+                     type="primary", use_container_width=True, key="memo_expense_btn"):
+            st.session_state.pop("_map_tooltip", None)
+            st.session_state["_goto_expenses"] = memo_clicked
+            st.rerun()
 
     for idx, r in enumerate(selected_memos):
         duration_str      = _val(r.get("소요시간"))

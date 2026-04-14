@@ -132,17 +132,16 @@ if q_params.get("tab") == "expenses":
     expenses.render(data)
 else:
     # 일반 탭 내비게이션
-    # 지도 핀 팝업 → postMessage 수신 → 경비 페이지로 이동 리스너
-    components.html("""<script>
-    if (!window._expNavListenerAdded) {
-        window._expNavListenerAdded = true;
-        window.parent.addEventListener('message', function(e) {
-            if (e.data && e.data.type === 'go_expense') {
-                window.parent.location.href = e.data.url;
-            }
-        });
-    }
-    </script>""", height=0)
+    # 💰 경비 관리 탭으로 JS 강제 이동 (지도 핀 클릭 → 경비 버튼 클릭 시)
+    if st.session_state.get("_goto_expenses"):
+        exp_place = st.session_state.pop("_goto_expenses")
+        st.session_state["expense_prefill"] = exp_place
+        components.html("""<script>
+        setTimeout(function(){
+            var tabs = window.parent.document.querySelectorAll('[data-baseweb="tab"]');
+            if (tabs && tabs[2]) tabs[2].click();
+        }, 80);
+        </script>""", height=0)
 
     # 📊 여행 경비내역 탭으로 JS 강제 이동 (경비 관리 탭의 "전체 내역" 버튼 클릭 시)
     if st.session_state.pop("_goto_history", False):
