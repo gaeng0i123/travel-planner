@@ -110,16 +110,12 @@ def _render_ocr_form(data: dict) -> None:
     # 파일 업로더 리셋용 키 카운터
     if "ocr_upload_key" not in st.session_state:
         st.session_state.ocr_upload_key = 0
-    # 메모 textarea key 세대 카운터
+    # 메모 textarea key 세대 카운터 (저장 시 +1 → 새 키로 초기화)
     if "ocr_memo_gen" not in st.session_state:
         st.session_state.ocr_memo_gen = 0
 
-    # 핀에서 넘어온 장소명 (메모 기본값용)
-    place_from_pin = st.query_params.get("place", "")
-    ocr_memo_skey = f"ocr_memo_{st.session_state.ocr_memo_gen}"
-    default_memo = f"[{place_from_pin}] OCR 인식" if place_from_pin else "OCR 인식"
-    if ocr_memo_skey not in st.session_state:
-        st.session_state[ocr_memo_skey] = default_memo
+    gen = st.session_state.ocr_memo_gen
+    ocr_memo_skey = f"ocr_memo_{gen}"
 
     def _clear_ocr_memo():
         st.session_state[ocr_memo_skey] = ""
@@ -139,103 +135,115 @@ def _render_ocr_form(data: dict) -> None:
                 result = parse_receipt(img)
                 if result:
                     st.session_state.ocr_result = result
+                    # OCR 완료 시점에 store_name으로 메모 기본값 설정
+                    store_name = result.get("store_name", "")
+                    st.session_state[ocr_memo_skey] = f"[{store_name}] OCR 인식" if store_name else "OCR 인식"
                     st.success("분석 완료! 아래 내용을 확인하고 저장하세요.")
 
     if st.session_state.ocr_result:
         res = st.session_state.ocr_result
-        # 메모 삭제 버튼 — 폼 바깥에서 on_click 콜백으로 처리 (폼 submit 없이 메모만 초기화)
-        st.button("🗑️ 메모 삭제", on_click=_clear_ocr_memo,
-                  key=f"ocr_clear_btn_{st.session_state.ocr_memo_gen}")
-        with st.form("ocr_expense_form"):
-            col1, col2 = st.columns(2)
-            with col1:
-                o_date = st.text_input("날짜", value=res.get("date", datetime.now().strftime("%Y-%m-%d")))
-                o_time = st.text_input("시간", value=res.get("time", ""))
-            with col2:
-                o_place = st.text_input("장소명", value=res.get("store_name", ""))
-                o_method = st.selectbox("결제수단", ["현금", "카드"],
-                                        index=0 if res.get("payment_method", "").lower() != "card" else 1)
 
-            st.markdown("**품목 목록 (수정 가능)**")
-            raw_items = res.get("items", [])
-            if not isinstance(raw_items, list):
-                raw_items = []
-            items_df = pd.DataFrame(
-                [{"품목": it.get("name", ""), "단가(VND)": it.get("unit_price", 0), "수량": it.get("quantity", 1)} for it in raw_items]
-            ) if raw_items else pd.DataFrame({"품목": [""], "단가(VND)": [0], "수량": [1]})
-            edited_df = st.data_editor(items_df, num_rows="dynamic", use_container_width=True)
+        # st.form 없이 일반 위젯 사용 — 저장·삭제 버튼을 같은 줄에 배치하기 위함
+        col1, col2 = st.columns(2)
+        with col1:
+            o_date = st.text_input("날짜", key=f"ocr_date_{gen}",
+                                   value=res.get("date", datetime.now().strftime("%Y-%m-%d")))
+            o_time = st.text_input("시간", key=f"ocr_time_{gen}",
+                                   value=res.get("time", ""))
+        with col2:
+            o_place = st.text_input("장소명", key=f"ocr_place_{gen}",
+                                    value=res.get("store_name", ""))
+            o_method = st.selectbox("결제수단", ["현금", "카드"],
+                                    key=f"ocr_method_{gen}",
+                                    index=0 if res.get("payment_method", "").lower() != "card" else 1)
 
-            # 합계 비교
-            try:
-                calc_total = int(sum(
-                    it.get("unit_price", 0) * it.get("quantity", 1) for it in raw_items
-                ))
-            except:
-                calc_total = 0
-            try:
-                receipt_total = int(res.get("receipt_total", 0) or 0)
-            except:
-                receipt_total = 0
+        st.markdown("**품목 목록 (수정 가능)**")
+        raw_items = res.get("items", [])
+        if not isinstance(raw_items, list):
+            raw_items = []
+        items_df = pd.DataFrame(
+            [{"품목": it.get("name", ""), "단가(VND)": it.get("unit_price", 0), "수량": it.get("quantity", 1)} for it in raw_items]
+        ) if raw_items else pd.DataFrame({"품목": [""], "단가(VND)": [0], "수량": [1]})
+        edited_df = st.data_editor(items_df, num_rows="dynamic",
+                                   key=f"ocr_items_{gen}",
+                                   use_container_width=True)
 
-            if receipt_total and calc_total != receipt_total:
-                st.markdown(
-                    f"<div style='background:#fff3cd;border-left:4px solid #ffc107;padding:8px 12px;border-radius:4px;margin:4px 0;'>"
-                    f"⚠️ 품목 합계 <b>{calc_total:,}</b> VND &nbsp;≠&nbsp; 영수증 합계 <b>{receipt_total:,}</b> VND"
-                    f"<br><small style='color:#856404;'>품목 금액을 확인하고 수정해 주세요.</small></div>",
-                    unsafe_allow_html=True,
-                )
-            elif receipt_total and calc_total == receipt_total:
-                st.markdown(
-                    f"<div style='background:#d4edda;border-left:4px solid #28a745;padding:8px 12px;border-radius:4px;margin:4px 0;'>"
-                    f"✅ 품목 합계 <b>{calc_total:,}</b> VND = 영수증 합계 <b>{receipt_total:,}</b> VND</div>",
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.markdown(
-                    f"<div style='background:#f8f9fa;border-left:4px solid #aaa;padding:8px 12px;border-radius:4px;margin:4px 0;'>"
-                    f"합계 <b>{calc_total:,}</b> VND</div>",
-                    unsafe_allow_html=True,
-                )
+        # 합계 비교
+        try:
+            calc_total = int(sum(
+                it.get("unit_price", 0) * it.get("quantity", 1) for it in raw_items
+            ))
+        except:
+            calc_total = 0
+        try:
+            receipt_total = int(res.get("receipt_total", 0) or 0)
+        except:
+            receipt_total = 0
 
-            o_memo = st.text_area("메모", key=ocr_memo_skey)
+        if receipt_total and calc_total != receipt_total:
+            st.markdown(
+                f"<div style='background:#fff3cd;border-left:4px solid #ffc107;padding:8px 12px;border-radius:4px;margin:4px 0;'>"
+                f"⚠️ 품목 합계 <b>{calc_total:,}</b> VND &nbsp;≠&nbsp; 영수증 합계 <b>{receipt_total:,}</b> VND"
+                f"<br><small style='color:#856404;'>품목 금액을 확인하고 수정해 주세요.</small></div>",
+                unsafe_allow_html=True,
+            )
+        elif receipt_total and calc_total == receipt_total:
+            st.markdown(
+                f"<div style='background:#d4edda;border-left:4px solid #28a745;padding:8px 12px;border-radius:4px;margin:4px 0;'>"
+                f"✅ 품목 합계 <b>{calc_total:,}</b> VND = 영수증 합계 <b>{receipt_total:,}</b> VND</div>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                f"<div style='background:#f8f9fa;border-left:4px solid #aaa;padding:8px 12px;border-radius:4px;margin:4px 0;'>"
+                f"합계 <b>{calc_total:,}</b> VND</div>",
+                unsafe_allow_html=True,
+            )
 
-            save_ocr = st.form_submit_button("💾 품목별 저장하기", use_container_width=True)
+        o_memo = st.text_area("메모", key=ocr_memo_skey)
 
-            if save_ocr:
-                receipt_id = datetime.now().strftime("RCP_%m%d_%H%M%S")
-                new_rows = []
-                for _, item_row in edited_df.iterrows():
-                    name = str(item_row.get("품목", "")).strip()
-                    if not name:
-                        continue
-                    try:
-                        unit_price = int(float(str(item_row.get("단가(VND)", 0)).replace(",", "")))
-                    except:
-                        unit_price = 0
-                    try:
-                        qty = int(item_row.get("수량", 1))
-                    except:
-                        qty = 1
-                    total_vnd = unit_price * qty
-                    new_rows.append({
-                        "영수증ID": receipt_id,
-                        "날짜": o_date, "시간": o_time, "장소명": o_place,
-                        "품목": name, "단가": unit_price, "수량": qty,
-                        "총액(VND)": total_vnd, "환산금액(KRW)": int(total_vnd * VND_TO_KRW),
-                        "결제수단": o_method, "memo": o_memo, "영수증URL": ""
-                    })
-                if new_rows:
-                    df_exp = pd.DataFrame(data.get("expenses", []))
-                    df_final = pd.concat([df_exp, pd.DataFrame(new_rows)], ignore_index=True)
-                    # 초기화를 rerun 전에 실행
-                    st.session_state.ocr_result = {}
-                    st.session_state.receipt_image = None
-                    st.session_state.ocr_upload_key += 1  # 파일 업로더 리셋
-                    st.session_state.ocr_memo_gen += 1   # 메모 key 세대 올려서 기본값 복원
-                    with st.spinner("시트에 저장 중..."):
-                        update_sheet(df_final, "expenses")
-                    st.toast(f"✅ {len(new_rows)}개 품목 저장 완료!")
-                    st.rerun()
+        # 저장(70%) + 메모 삭제(30%) 같은 줄 배치
+        bc1, bc2 = st.columns([7, 3])
+        with bc1:
+            save_ocr = st.button("💾 품목별 저장하기", use_container_width=True, type="primary")
+        with bc2:
+            st.button("🗑️ 메모 삭제", on_click=_clear_ocr_memo,
+                      key=f"ocr_clear_btn_{gen}", use_container_width=True)
+
+        if save_ocr:
+            receipt_id = datetime.now().strftime("RCP_%m%d_%H%M%S")
+            new_rows = []
+            for _, item_row in edited_df.iterrows():
+                name = str(item_row.get("품목", "")).strip()
+                if not name:
+                    continue
+                try:
+                    unit_price = int(float(str(item_row.get("단가(VND)", 0)).replace(",", "")))
+                except:
+                    unit_price = 0
+                try:
+                    qty = int(item_row.get("수량", 1))
+                except:
+                    qty = 1
+                total_vnd = unit_price * qty
+                new_rows.append({
+                    "영수증ID": receipt_id,
+                    "날짜": o_date, "시간": o_time, "장소명": o_place,
+                    "품목": name, "단가": unit_price, "수량": qty,
+                    "총액(VND)": total_vnd, "환산금액(KRW)": int(total_vnd * VND_TO_KRW),
+                    "결제수단": o_method, "memo": o_memo, "영수증URL": ""
+                })
+            if new_rows:
+                df_exp = pd.DataFrame(data.get("expenses", []))
+                df_final = pd.concat([df_exp, pd.DataFrame(new_rows)], ignore_index=True)
+                st.session_state.ocr_result = {}
+                st.session_state.receipt_image = None
+                st.session_state.ocr_upload_key += 1  # 파일 업로더 리셋
+                st.session_state.ocr_memo_gen += 1    # 메모 key 세대 올려서 초기화
+                with st.spinner("시트에 저장 중..."):
+                    update_sheet(df_final, "expenses")
+                st.toast(f"✅ {len(new_rows)}개 품목 저장 완료!")
+                st.rerun()
 
 def _render_expense_list(data: dict) -> None:
     st.subheader("📊 여행 경비 내역")
