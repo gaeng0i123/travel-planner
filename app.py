@@ -74,7 +74,7 @@ st.markdown("""
 # 로컬 모듈 — set_page_config 이후에 임포트해야 conn 생성 순서가 안전
 from utils.auth import check_password      # noqa: E402
 from utils.sheets import load_all_data     # noqa: E402
-from tabs import prep, trip, ai            # noqa: E402
+from tabs import prep, trip, expenses, ai  # noqa: E402
 
 # 로그인
 if not check_password():
@@ -94,18 +94,38 @@ with col_btn:
         st.session_state.data = load_all_data()
         st.rerun()
 
-# 탭
-tab_prep, tab_trip, tab_ai = st.tabs([
-    "🏗️ 여행 준비 (Live Sheets)",
-    "🛵 여행 현지 (동선/영수증)",
-    "💬 AI 여행 비서",
-])
+# 핀 팝업에서 새 탭으로 열린 경우 — 탭 없이 경비 폼 바로 표시
+q_params = st.query_params
+if q_params.get("tab") == "expenses":
+    place = q_params.get("place", "")
+    if place:
+        st.info(f"📍 **{place}** 경비 입력")
+    # 새 탭을 닫아서 원래 지도 화면으로 복귀
+    st.markdown(
+        '<a href="javascript:window.close();" '
+        'style="display:inline-block;padding:6px 14px;background:#f0f2f6;'
+        'border-radius:6px;text-decoration:none;color:#333;font-size:14px;">'
+        '← 탭 닫기 (지도로 돌아가기)</a>',
+        unsafe_allow_html=True,
+    )
+    expenses.render(data)
+else:
+    # 일반 탭 내비게이션
+    tab_prep, tab_trip, tab_exp, tab_ai = st.tabs([
+        "🏗️ 여행 준비",
+        "🛵 여행 현지",
+        "💰 경비 관리",
+        "💬 AI 여행 비서",
+    ])
 
-with tab_prep:
-    prep.render(data)
+    with tab_prep:
+        prep.render(data)
 
-with tab_trip:
-    trip.render(data)
+    with tab_trip:
+        trip.render(data)
 
-with tab_ai:
-    ai.render()
+    with tab_exp:
+        expenses.render(data)
+
+    with tab_ai:
+        ai.render()
