@@ -83,16 +83,14 @@ def _render_manual_form(data: dict, prefilled_place: str) -> None:
         exp_krw = int(exp_vnd * VND_TO_KRW)
         st.text_input("환산금액 (KRW)", value=f"{exp_krw:,}원", disabled=True)
 
-    exp_memo = st.text_area("메모", key=memo_key)
-
-    # 저장(70%) + 메모 삭제(30%) 같은 줄 배치
-    bc1, bc2 = st.columns([7, 3])
-    with bc1:
-        save_btn = st.button("💾 저장하기", key=f"m_save_{fk}",
-                             use_container_width=True, type="primary")
-    with bc2:
-        st.button("🗑️ 메모 삭제", on_click=_clear_memo,
-                  key=f"m_clear_{fk}", use_container_width=True)
+    ml, mr = st.columns([6, 1])
+    with ml:
+        st.markdown("**메모**")
+    with mr:
+        st.button("🗑️", on_click=_clear_memo, key=f"m_clear_{fk}", use_container_width=True)
+    exp_memo = st.text_area("", key=memo_key, label_visibility="collapsed")
+    save_btn = st.button("💾 저장하기", key=f"m_save_{fk}",
+                         use_container_width=True, type="primary")
 
     if save_btn:
         if not exp_items.strip() and exp_vnd == 0:
@@ -216,15 +214,14 @@ def _render_ocr_form(data: dict) -> None:
                 unsafe_allow_html=True,
             )
 
-        o_memo = st.text_area("메모", key=ocr_memo_skey)
-
-        # 저장(70%) + 메모 삭제(30%) 같은 줄 배치
-        bc1, bc2 = st.columns([7, 3])
-        with bc1:
-            save_ocr = st.button("💾 품목별 저장하기", use_container_width=True, type="primary")
-        with bc2:
-            st.button("🗑️ 메모 삭제", on_click=_clear_ocr_memo,
+        ml, mr = st.columns([6, 1])
+        with ml:
+            st.markdown("**메모**")
+        with mr:
+            st.button("🗑️", on_click=_clear_ocr_memo,
                       key=f"ocr_clear_btn_{gen}", use_container_width=True)
+        o_memo = st.text_area("", key=ocr_memo_skey, label_visibility="collapsed")
+        save_ocr = st.button("💾 품목별 저장하기", use_container_width=True, type="primary")
 
         if save_ocr:
             receipt_id = datetime.now().strftime("RCP_%m%d_%H%M%S")
@@ -367,26 +364,25 @@ def _render_expense_list(data: dict) -> None:
                                 st.rerun()
                 else:
                     # ── 일반 표시 ──
-                    ic1, ic2, ic3 = st.columns([5, 1, 1])
+                    if unit and qty:
+                        st.markdown(
+                            f"<p style='margin:3px 0;'>{item_name}"
+                            f"&nbsp;<small style='color:#888;'>{unit:,} × {qty} = {total:,} VND</small></p>",
+                            unsafe_allow_html=True,
+                        )
+                    else:
+                        st.markdown(
+                            f"<p style='margin:3px 0;'>{item_name}"
+                            f"&nbsp;<small style='color:#888;'>{total:,} VND</small></p>",
+                            unsafe_allow_html=True,
+                        )
+                    ic1, ic2 = st.columns(2)
                     with ic1:
-                        if unit and qty:
-                            st.markdown(
-                                f"<p style='margin:3px 0;'>{item_name}"
-                                f"&nbsp;<small style='color:#888;'>{unit:,} × {qty} = {total:,} VND</small></p>",
-                                unsafe_allow_html=True,
-                            )
-                        else:
-                            st.markdown(
-                                f"<p style='margin:3px 0;'>{item_name}"
-                                f"&nbsp;<small style='color:#888;'>{total:,} VND</small></p>",
-                                unsafe_allow_html=True,
-                            )
-                    with ic2:
-                        if st.button("✏️", key=f"edit_{idx}", use_container_width=True):
+                        if st.button("✏️ 수정", key=f"edit_{idx}", use_container_width=True):
                             st.session_state.edit_idx = idx
                             st.rerun()
-                    with ic3:
-                        if st.button("🗑️", key=f"del_{idx}", use_container_width=True):
+                    with ic2:
+                        if st.button("🗑️ 삭제", key=f"del_{idx}", use_container_width=True):
                             df_save = df_raw.drop(index=idx).drop(columns=["_gkey"])
                             update_sheet(df_save, "expenses")
                             st.rerun()
