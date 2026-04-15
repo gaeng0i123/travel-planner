@@ -99,8 +99,31 @@ def _collect_pins(df_day: pd.DataFrame) -> list:
 
 # ── 렌더 함수 ──────────────────────────────────────────────────────────────────
 
+_SQUARE_MAP_JS = """
+<script>
+(function() {
+    var p = window.parent;
+    function squarify() {
+        var wrappers = p.document.querySelectorAll('[data-testid="stCustomComponentV1"]');
+        wrappers.forEach(function(wrap) {
+            var iframe = wrap.querySelector('iframe');
+            if (!iframe) return;
+            if (iframe.offsetHeight < 150) return;   // JS 인젝션용 tiny iframe 제외
+            var w = wrap.getBoundingClientRect().width;
+            if (w > 0) iframe.style.setProperty('height', w + 'px', 'important');
+        });
+    }
+    squarify();
+    setTimeout(squarify, 400);
+    new MutationObserver(function() { setTimeout(squarify, 150); })
+        .observe(p.document.body, { childList: true, subtree: true });
+})();
+</script>
+"""
+
 def render(data: dict) -> None:
     st.header("🛵 현지 실시간 관리")
+    components.html(_SQUARE_MAP_JS, height=0)
 
     # 확정 일정 필터링
     confirmed = [
@@ -261,7 +284,7 @@ def _render_day(df_confirmed: pd.DataFrame, memo_places: list) -> None:
             pass
 
     map_key = f"day_map_{map_center[0]}_{map_center[1]}_{map_zoom}"
-    map_data = st_folium(m, use_container_width=True, height=360, key=map_key,
+    map_data = st_folium(m, use_container_width=True, height=400, key=map_key,
                          returned_objects=["last_object_clicked_tooltip"])
 
     # 핀 클릭 시 경비 버튼 표시
@@ -367,7 +390,7 @@ def _render_memo(memo_places: list) -> None:
             pass
 
     memo_map_key = f"memo_map_{memo_map_center[0]}_{memo_map_center[1]}"
-    memo_data = st_folium(m, use_container_width=True, height=360, key=memo_map_key,
+    memo_data = st_folium(m, use_container_width=True, height=400, key=memo_map_key,
                           returned_objects=["last_object_clicked_tooltip"])
 
     raw_memo_tooltip = (memo_data or {}).get("last_object_clicked_tooltip") or ""
@@ -460,7 +483,7 @@ def _render_all(df_confirmed: pd.DataFrame) -> None:
                 ),
             ).add_to(m)
 
-    st_folium(m, use_container_width=True, height=360)
+    st_folium(m, use_container_width=True, height=400)
 
     legend_html = "".join(
         f'<span style="display:inline-block;margin:4px 8px;font-size:13px;">'
