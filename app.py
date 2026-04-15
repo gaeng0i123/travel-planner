@@ -13,6 +13,10 @@ st.markdown("""
     header[data-testid="stHeader"] {
         display: none !important;
     }
+    footer, #MainMenu, [data-testid="stStatusWidget"],
+    [data-testid="stToolbar"], .viewerBadge_container__1QSob {
+        display: none !important;
+    }
     .main .block-container {
         padding-top: 0rem !important;
         padding-bottom: 0.5rem !important;
