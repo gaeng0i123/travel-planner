@@ -34,12 +34,17 @@
 - [x] **2026-04-15:** 핀 팝업 경비 링크 about:blank 오류 수정 완료: Folium iframe 내 상대URL → `window.top.location.origin+경로` 절대URL 조립. ✅ 크롬·사파리 동작 확인.
 - [x] **2026-04-15:** 지도로 돌아가기 탭 닫기 완성: `window.close()` 계열 모두 실패 → `components.html` 자식 iframe에서 `window.parent.close()` 호출 방식으로 해결. ✅ 크롬·사파리 동작 확인.
 - [x] **2026-04-15:** st_folium `returned_objects` 핀 클릭 감지: 지도 아래 "💰 장소명 — 경비 기록하기" Streamlit 버튼 표시. 클릭 시 경비 탭 이동 + 장소명 자동 채움.
+- [x] **2026-04-15:** 핀 팝업 경비 링크 제거: Folium iframe sandbox `allow-popups` 미지원으로 `window.open` SecurityError 영구 불가 확인. 팝업에는 구글맵 링크만 유지, 경비 이동은 지도 아래 버튼 방식으로 대체.
+- [x] **2026-04-15:** 지도 높이 동적 정사각형: `_SQUARE_MAP_JS` + `MutationObserver`로 컨테이너 실제 너비 감지 후 height 동일 설정. 모바일·데스크톱 모두 정사각형. `height=400`은 JS 실행 전 첫 렌더 fallback.
 
 ### UI / 모바일 최적화
 - [x] 동기화 버튼 상단 이동: 사이드바 → 타이틀 우측.
 - [x] Streamlit 기본 헤더 숨기기, 제목과 버튼 한 줄 배치, st.info 슬림화.
 - [x] 모바일 폰트 위계 설정: h1 25px, h2 19px, 본문 14.5px.
 - [x] thinklog 헤딩 CSS 소형화: h1 1.2rem / h2 1.05rem / h3 0.95rem.
+- [x] **2026-04-15:** Streamlit 하단 `footer` · `#MainMenu` · `stStatusWidget` · `stToolbar` · `viewerBadge` CSS `display:none` 처리. 모바일 화면 하단 공간 확보.
+- [x] **2026-04-15:** 경비 관리·경비내역 탭 품목 행 레이아웃: 품목명 전체너비 + ✏️수정/🗑️삭제 버튼 50/50 같은 줄 배치.
+- [x] **2026-04-15:** 경비 관리 탭 메모 섹션: **메모** 헤더 텍스트 + 🗑️ 버튼 같은 행, textarea 아래, 저장 버튼 전체너비 구조로 변경.
 
 ### AI 여행 비서 탭
 - [x] 구글 독스 thinklog 연동: Gemini API 할당량 문제로 앱 내 AI 채팅 제거 → 독스 뷰어 + 외부 링크 방식으로 전환.
@@ -63,7 +68,8 @@
 - [x] **2026-04-15:** 직접 입력 저장 유효성 검증: 품목 비어있고 금액 0이면 저장 차단.
 - [x] **2026-04-15:** OCR 품목명 한글 번역 병기: 비한글 품목 인식 시 프롬프트에서 한글 번역 포함 (예: "Coffee (커피)") 지시.
 - [x] **2026-04-15:** OCR 완료 후 메모 기본값 `[장소명]OCR` 자동 설정: `ocr_memo_gen` 카운터로 재설정 트리거.
-- [x] **2026-04-15:** 메모 삭제 버튼 레이아웃 변경: 저장/삭제 같은 줄, 삭제 30% / 저장 70% 너비.
+- [x] **2026-04-15:** 메모 삭제 버튼 레이아웃 변경: 저장/삭제 같은 줄, 삭제 30% / 저장 70% 너비. → 이후 메모 헤더+삭제버튼 / textarea / 저장 전체너비 구조로 재변경.
+- [x] **2026-04-15:** OCR 사진 입력 방식 변경: `st.file_uploader` 단독(모바일 불가) → 📷 카메라 촬영(`st.camera_input`) + 🖼️ 갤러리 업로드(`st.file_uploader`) 탭 분리. 갤러리에 heic/webp 확장자 추가.
 - [x] **2026-04-15:** 오프라인 큐 모드 도입: `queue_update` (로컬 즉시 반영) + `flush_queue` (일괄 API 전송). 상단 온라인/오프라인 토글 + 🔄 동기화 버튼. 저장 스피너 제거.
 - [x] **2026-04-15:** `영수증URL` 컬럼 제거, `저장시간` 컬럼 추가 (OCR 저장 시 기록).
 - [x] **2026-04-15:** 경비 관리 탭 최근 경비 내역 최대 5그룹 표시 (최신 내림차순). "📊 전체 내역 →" 소형 버튼으로 JS `tabs[3].click()` 탭 이동.
@@ -105,6 +111,10 @@
 | 경비 링크 about:blank | Folium iframe 내 상대URL이 iframe src 기준으로 해석 | `window.top.location.origin` 절대URL 조립. ✅ 확인 |
 | window.close() 미작동 | 크롬: same-origin JS window.open()으로 연 탭만 닫기 허용 | close 버튼 제거, href="/" 링크로 대체 |
 | 시간 정렬 버그 | 문자열 비교 시 "9:00" > "13:00" 오류 | pd.to_datetime() 파싱 후 정렬 |
+| 모바일 OCR 사진 업로드 불가 | `st.file_uploader` 모바일 브라우저에서 파일 선택 미동작 | `st.camera_input` + `st.file_uploader` 탭 분리 |
+| 핀 팝업 경비 링크 SecurityError | Folium iframe sandbox `allow-popups` 미지원으로 `window.open` 차단 | 팝업 링크 제거, 지도 아래 Streamlit 버튼으로 대체 |
+| 지도 크기 고정으로 모바일에서 너무 큼 | `height=` 픽스값으로 화면 점유 과다 | JS `MutationObserver`로 컨테이너 너비 감지 → 동적 정사각형 |
+| Streamlit 하단 UI 화면 점유 | Community Cloud 기본 footer·메뉴 숨김 불가 | CSS `display:none !important` 로 전체 숨김 |
 
 ---
 
@@ -160,4 +170,4 @@
 - [ ] **영수증 OCR 실동작 검증:** 실제 영수증 사진으로 Gemini API 분석 결과 검증.
 
 ---
-*마지막 업데이트: 2026년 4월 15일 (경비 관리 탭 고도화 + 핀 팝업 경비 연동 완성 — 새 탭 열기·탭 닫기(window.parent.close) 모두 동작 확인)*
+*마지막 업데이트: 2026년 4월 15일 (모바일 UX 고도화 — OCR 카메라 촬영 지원, 지도 JS 동적 정사각형, Streamlit 하단 UI 숨김, 경비 탭 버튼 레이아웃 전면 개선)*
