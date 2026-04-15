@@ -124,10 +124,22 @@ def _render_ocr_form(data: dict) -> None:
     def _clear_ocr_memo():
         st.session_state[ocr_memo_skey] = ""
 
-    uploaded_file = st.file_uploader(
-        "영수증 사진 업로드", type=["jpg", "jpeg", "png"],
-        key=f"ocr_file_{st.session_state.ocr_upload_key}"
-    )
+    cam_tab, upload_tab = st.tabs(["📷 카메라 촬영", "🖼️ 갤러리 업로드"])
+    uploaded_file = None
+    with cam_tab:
+        cam_file = st.camera_input(
+            "영수증을 카메라로 찍어주세요",
+            key=f"ocr_cam_{st.session_state.ocr_upload_key}"
+        )
+        if cam_file:
+            uploaded_file = cam_file
+    with upload_tab:
+        gallery_file = st.file_uploader(
+            "영수증 사진 선택", type=["jpg", "jpeg", "png", "webp", "heic"],
+            key=f"ocr_file_{st.session_state.ocr_upload_key}"
+        )
+        if gallery_file:
+            uploaded_file = gallery_file
 
     if uploaded_file:
         st.session_state.receipt_image = uploaded_file
