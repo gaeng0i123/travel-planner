@@ -261,7 +261,7 @@ def _render_day(df_confirmed: pd.DataFrame, memo_places: list) -> None:
             pass
 
     map_key = f"day_map_{map_center[0]}_{map_center[1]}_{map_zoom}"
-    map_data = st_folium(m, use_container_width=True, height=500, key=map_key,
+    map_data = st_folium(m, use_container_width=True, height=360, key=map_key,
                          returned_objects=["last_object_clicked_tooltip"])
 
     # 핀 클릭 시 경비 버튼 표시
@@ -367,7 +367,7 @@ def _render_memo(memo_places: list) -> None:
             pass
 
     memo_map_key = f"memo_map_{memo_map_center[0]}_{memo_map_center[1]}"
-    memo_data = st_folium(m, use_container_width=True, height=400, key=memo_map_key,
+    memo_data = st_folium(m, use_container_width=True, height=360, key=memo_map_key,
                           returned_objects=["last_object_clicked_tooltip"])
 
     raw_memo_tooltip = (memo_data or {}).get("last_object_clicked_tooltip") or ""
@@ -460,7 +460,7 @@ def _render_all(df_confirmed: pd.DataFrame) -> None:
                 ),
             ).add_to(m)
 
-    st_folium(m, use_container_width=True, height=600)
+    st_folium(m, use_container_width=True, height=360)
 
     legend_html = "".join(
         f'<span style="display:inline-block;margin:4px 8px;font-size:13px;">'
