@@ -1,3 +1,5 @@
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import streamlit as st
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
@@ -17,26 +19,39 @@ _SHEET_KEY = {
 # set_page_config() 이후 임포트되므로 모듈 로드 시점에 연결 생성해도 안전
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-def load_all_data() -> dict:
-    try:
-        budget_df    = conn.read(spreadsheet=SHEET_URL, worksheet="budget",   ttl=0)
-        checklist_df = conn.read(spreadsheet=SHEET_URL, worksheet="checklist", ttl=0)
-        hotels_df    = conn.read(spreadsheet=SHEET_URL, worksheet="hotels",   ttl=0)
-        itinerary_df = conn.read(spreadsheet=SHEET_URL, worksheet="상세일정", ttl=0)
-        try:
-            expenses_df = conn.read(spreadsheet=SHEET_URL, worksheet="expenses", ttl=0)
-        except Exception:
-            expenses_df = pd.DataFrame(columns=["영수증ID", "날짜", "시간", "장소명", "품목", "단가", "수량", "총액(VND)", "환산금액(KRW)", "결제수단", "memo", "저장시간"])
+@st.cache_resource
+def _uploaded_ws() -> set:
+    """백그라운드 업로드 완료된 워크시트명 추적 (스레드 → 메인 신호용)"""
+    return set()
 
-        return {
-            "budget":    budget_df.to_dict("records"),
-            "checklist": checklist_df.to_dict("records"),
-            "hotels":    hotels_df.to_dict("records"),
-            "itinerary": itinerary_df.to_dict("records"),
-            "expenses":  expenses_df.to_dict("records"),
-        }
+_SHEETS_TO_LOAD = ["budget", "checklist", "hotels", "상세일정", "expenses"]
+_TTL = 60  # 60초 캐시 — 탭 전환/버튼 클릭 시 API 재호출 방지
+
+def _read_sheet(worksheet: str) -> tuple[str, pd.DataFrame | None]:
+    try:
+        df = conn.read(spreadsheet=SHEET_URL, worksheet=worksheet, ttl=_TTL)
+        return worksheet, df
     except Exception:
-        return {"budget": [], "checklist": [], "hotels": [], "itinerary": [], "expenses": []}
+        return worksheet, None
+
+def load_all_data() -> dict:
+    result = {"budget": [], "checklist": [], "hotels": [], "itinerary": [], "expenses": []}
+    try:
+        # 5개 시트 병렬 로딩
+        with ThreadPoolExecutor(max_workers=5) as ex:
+            futures = {ex.submit(_read_sheet, ws): ws for ws in _SHEETS_TO_LOAD}
+            for future in as_completed(futures):
+                ws, df = future.result()
+                if df is None:
+                    if ws == "expenses":
+                        df = pd.DataFrame(columns=["영수증ID", "날짜", "시간", "장소명", "품목", "단가", "수량", "총액(VND)", "환산금액(KRW)", "결제수단", "memo", "저장시간"])
+                    else:
+                        continue
+                key = _SHEET_KEY.get(ws, ws)
+                result[key] = df.to_dict("records")
+    except Exception:
+        pass
+    return result
 
 
 # ── 오프라인 대기열 ────────────────────────────────────────────────────────────
@@ -76,12 +91,24 @@ def flush_queue() -> tuple[int, list[str]]:
 
 def pending_count() -> int:
     _ensure_queue()
+    # 백그라운드 업로드 완료된 항목을 sync_queue에서 정리
+    done = _uploaded_ws()
+    for ws in list(done):
+        st.session_state.sync_queue.pop(ws, None)
+    done.clear()
     return len(st.session_state.sync_queue)
 
 
 def update_sheet(df: pd.DataFrame, worksheet_name: str) -> None:
-    """즉시 로컬 반영 + 대기열 적재. 오프라인 모드면 API 호출 생략."""
+    """로컬 즉시 반영 후 백그라운드에서 업로드 (non-blocking)."""
     queue_update(df, worksheet_name)
     if not st.session_state.get("offline_mode", False):
-        # 온라인 모드: 바로 flush 시도
-        flush_queue()
+        df_copy = df.copy()
+        done = _uploaded_ws()
+        def _upload():
+            try:
+                conn.update(spreadsheet=SHEET_URL, worksheet=worksheet_name, data=df_copy)
+                done.add(worksheet_name)
+            except Exception:
+                pass  # 실패 시 sync_queue에 남아서 동기화 버튼으로 재시도 가능
+        threading.Thread(target=_upload, daemon=True).start()
